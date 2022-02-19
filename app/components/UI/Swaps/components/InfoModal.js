@@ -2,9 +2,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { StyleSheet, View, TouchableOpacity, SafeAreaView } from 'react-native';
 import Modal from 'react-native-modal';
-import Text from '../../../Base/Text';
 import IonicIcon from 'react-native-vector-icons/Ionicons';
 import { colors as importedColors } from '../../../../styles/common';
+import Text from '../../../Base/Text';
 import Title from '../../../Base/Title';
 import { useAppThemeFromContext, mockTheme } from '../../../../util/theme';
 
@@ -34,7 +34,6 @@ const createStyles = (colors) =>
 			width: '100%',
 			paddingVertical: 15,
 			paddingHorizontal: 20,
-			paddingBottom: 5,
 			flexDirection: 'row',
 			alignItems: 'center',
 			justifyContent: 'space-between',
@@ -47,11 +46,16 @@ const createStyles = (colors) =>
 			width: '100%',
 			paddingVertical: 5,
 			marginBottom: 15,
+			paddingTop: 5,
 			paddingHorizontal: 20,
+		},
+		messageLimit: {
+			width: '90%',
+			marginVertical: 10,
 		},
 	});
 
-function InfoModal({ title, body, isVisible, toggleModal, message, propagateSwipe }) {
+function InfoModal({ title, body, isVisible, toggleModal, message, propagateSwipe, clickText, clickPress }) {
 	const { colors } = useAppThemeFromContext() || mockTheme;
 	const styles = createStyles(colors);
 
@@ -70,14 +74,23 @@ function InfoModal({ title, body, isVisible, toggleModal, message, propagateSwip
 			<SafeAreaView style={styles.modalView}>
 				<View style={styles.title}>
 					{title && <Title>{title}</Title>}
-					{message && <Text>{message}</Text>}
+					{message && (
+						<Text style={styles.messageLimit}>
+							<Text>{message} </Text>
+							{clickText && (
+								<Text link onPress={clickPress}>
+									{clickText}
+								</Text>
+							)}
+						</Text>
+					)}
 					{!message && (
 						<TouchableOpacity onPress={toggleModal} hitSlop={{ top: 20, left: 20, right: 20, bottom: 20 }}>
 							<IonicIcon name="ios-close" style={styles.closeIcon} size={30} />
 						</TouchableOpacity>
 					)}
 				</View>
-				<View style={styles.body}>{body}</View>
+				{body && <View style={styles.body}>{body}</View>}
 			</SafeAreaView>
 		</Modal>
 	);
@@ -89,6 +102,8 @@ InfoModal.propTypes = {
 	toggleModal: PropTypes.func,
 	propagateSwipe: PropTypes.bool,
 	message: PropTypes.string,
+	clickText: PropTypes.string,
+	clickPress: PropTypes.func,
 };
 
 export default InfoModal;

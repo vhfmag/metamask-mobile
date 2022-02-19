@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
-import { StyleSheet, Text, ScrollView, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, ScrollView, TouchableOpacity, View, TextInput } from 'react-native';
 import { connect } from 'react-redux';
+import Icon from 'react-native-vector-icons/Ionicons';
 import ActionSheet from 'react-native-actionsheet';
 import { fontStyles } from '../../../../styles/common';
 import { getNavigationOptionsTitle } from '../../../UI/Navbar';
@@ -10,6 +11,7 @@ import Networks, { getAllNetworks } from '../../../../util/networks';
 import StyledButton from '../../../UI/StyledButton';
 import Engine from '../../../../core/Engine';
 import { MAINNET, RPC } from '../../../../constants/network';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { ThemeContext, mockTheme } from '../../../../util/theme';
 
 const createStyles = (colors) =>
@@ -19,7 +21,7 @@ const createStyles = (colors) =>
 			flex: 1,
 			paddingVertical: 12,
 			paddingHorizontal: 24,
-			paddingBottom: 36,
+			marginBottom: 24,
 		},
 		networkIcon: {
 			width: 15,
@@ -39,6 +41,7 @@ const createStyles = (colors) =>
 			flex: 1,
 			flexDirection: 'row',
 			paddingVertical: 12,
+			alignItems: 'center',
 		},
 		networkWrapper: {
 			flex: 0,
@@ -54,6 +57,25 @@ const createStyles = (colors) =>
 			paddingVertical: 12,
 			color: colors.text.default,
 			...fontStyles.bold,
+		},
+		inputWrapper: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			paddingHorizontal: 10,
+			paddingVertical: 10,
+			borderRadius: 5,
+			borderWidth: 1,
+			borderColor: colors.grey100,
+		},
+		input: {
+			flex: 1,
+			fontSize: 14,
+			color: colors.black,
+			...fontStyles.normal,
+			paddingLeft: 10,
+		},
+		icon: {
+			marginLeft: 8,
 		},
 	});
 
@@ -83,7 +105,12 @@ class NetworksSettings extends PureComponent {
 	actionSheet = null;
 	networkToRemove = null;
 
-	state = {};
+	static navigationOptions = ({ navigation }) =>
+		getNavigationOptionsTitle(strings('app_settings.networks_title'), navigation);
+
+	state = {
+		searchString: '',
+	};
 
 	updateNavBar = () => {
 		const { navigation } = this.props;
@@ -103,7 +130,7 @@ class NetworksSettings extends PureComponent {
 
 	getOtherNetworks = () => getAllNetworks().slice(1);
 
-	onPress = (network) => {
+	onNetworkPress = (network) => {
 		const { navigation } = this.props;
 		navigation.navigate('NetworkSettings', { network });
 	};
@@ -151,15 +178,14 @@ class NetworksSettings extends PureComponent {
 		return (
 			<TouchableOpacity
 				key={`network-${i}`}
-				onPress={() => this.onPress(network)} // eslint-disable-line
+				onPress={() => this.onNetworkPress(network)} // eslint-disable-line
 				onLongPress={() => isCustomRPC && this.showRemoveMenu(network)} // eslint-disable-line
 				testID={'select-network'}
 			>
 				<View style={styles.network}>
 					<View style={[styles.networkIcon, color ? { backgroundColor: color } : styles.otherNetworkIcon]} />
-					<View style={styles.networkInfo}>
-						<Text style={styles.networkLabel}>{name}</Text>
-					</View>
+					<Text style={styles.networkLabel}>{name}</Text>
+					{!isCustomRPC && <FontAwesome name="lock" size={20} color={colors.grey100} style={styles.icon} />}
 				</View>
 			</TouchableOpacity>
 		);
@@ -176,7 +202,6 @@ class NetworksSettings extends PureComponent {
 		const { frequentRpcList } = this.props;
 		return frequentRpcList.map(({ rpcUrl, nickname }, i) => {
 			const { color, name } = { name: nickname || rpcUrl, color: null };
-
 			return this.networkElement(name, color, i, rpcUrl, true);
 		});
 	};
@@ -189,7 +214,7 @@ class NetworksSettings extends PureComponent {
 		if (frequentRpcList.length > 0) {
 			return (
 				<View testID={'rpc-networks'}>
-					<Text style={styles.sectionLabel}>{strings('app_settings.network_rpc_networks')}</Text>
+					<Text style={styles.sectionLabel}>{strings('app_settings.custom_network_name')}</Text>
 					{this.renderRpcNetworks()}
 				</View>
 			);
@@ -206,7 +231,7 @@ class NetworksSettings extends PureComponent {
 				<TouchableOpacity
 					style={styles.network}
 					key={`network-${MAINNET}`}
-					onPress={() => this.onPress(MAINNET)} // eslint-disable-line
+					onPress={() => this.onNetworkPress(MAINNET)} // eslint-disable-line
 				>
 					<View style={styles.networkWrapper}>
 						<View style={[styles.networkIcon, { backgroundColor: mainnetColor }]} />
@@ -214,10 +239,15 @@ class NetworksSettings extends PureComponent {
 							<Text style={styles.networkLabel}>{mainnetName}</Text>
 						</View>
 					</View>
+					<FontAwesome name="lock" size={20} color={colors.grey100} style={styles.icon} />
 				</TouchableOpacity>
 			</View>
 		);
 	}
+
+	handleSearchTextChange = (text) => this.setState({ searchString: text });
+
+	clearSearchInput = () => this.setState({ searchString: '' });
 
 	render() {
 		const colors = this.context.colors || mockTheme.colors;
@@ -226,11 +256,25 @@ class NetworksSettings extends PureComponent {
 
 		return (
 			<View style={styles.wrapper} testID={'networks-screen'}>
+				<View style={styles.inputWrapper}>
+					<Icon name="ios-search" size={20} color={colors.grey100} />
+					<TextInput
+						style={styles.input}
+						placeholder={strings('networks.search')}
+						placeholderTextColor={colors.grey500}
+						value={this.state.searchString}
+						onChangeText={this.handleSearchTextChange}
+					/>
+					{this.state.searchString.length > 0 && (
+						<Icon name="ios-close" size={20} color={colors.grey300} onPress={this.clearSearchInput} />
+					)}
+				</View>
 				<ScrollView style={styles.networksWrapper}>
+					<Text style={styles.sectionLabel}>{strings('app_settings.mainnet')}</Text>
 					{this.renderMainnet()}
-					<Text style={styles.sectionLabel}>{strings('app_settings.network_other_networks')}</Text>
-					{this.renderOtherNetworks()}
 					{this.renderRpcNetworksView()}
+					<Text style={styles.sectionLabel}>{strings('app_settings.test_network_name')}</Text>
+					{this.renderOtherNetworks()}
 				</ScrollView>
 				<StyledButton
 					type="confirm"

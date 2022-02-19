@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
-import { StyleSheet, Text, View, TextInput, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, SafeAreaView, Image, Linking } from 'react-native';
 import { connect } from 'react-redux';
+import FadeIn from 'react-native-fade-in-image';
 import { fontStyles } from '../../../../../styles/common';
 import { getNavigationOptionsTitle } from '../../../../UI/Navbar';
 import { strings } from '../../../../../../locales/i18n';
@@ -11,6 +12,8 @@ import StyledButton from '../../../../UI/StyledButton';
 import Engine from '../../../../../core/Engine';
 import { isWebUri } from 'valid-url';
 import URL from 'url-parse';
+import WarningIcon from 'react-native-vector-icons/FontAwesome';
+import CustomText from '../../../../Base/Text';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import BigNumber from 'bignumber.js';
 import { jsonRpcRequest } from '../../../../../util/jsonRpcRequest';
@@ -18,6 +21,13 @@ import Logger from '../../../../../util/Logger';
 import { isPrefixedFormattedHexString } from '../../../../../util/number';
 import AppConstants from '../../../../../core/AppConstants';
 import AnalyticsV2 from '../../../../../util/analyticsV2';
+import ScrollableTabView from 'react-native-scrollable-tab-view';
+import DefaultTabBar from 'react-native-scrollable-tab-view/DefaultTabBar';
+import PopularList from '../../../../../util/networks/customNetworks';
+import NetworkModals from '../../../../UI/NetworkModal';
+import WarningMessage from '../../../../Views/SendFlow/WarningMessage';
+import InfoModal from '../../../../UI/Swaps/components/InfoModal';
+import { MAINNET } from '../../../../../constants/network';
 import { ThemeContext, mockTheme } from '../../../../../util/theme';
 import { PRIVATENETWORK } from '../../../../../constants/network';
 import { showNetworkOnboardingAction } from '../../../../../actions/onboardNetwork';
@@ -85,6 +95,53 @@ const createStyles = (colors) =>
 			flexDirection: 'column',
 			alignSelf: 'flex-end',
 		},
+		editableButtonsContainer: {
+			flex: 1,
+			flexDirection: 'row',
+		},
+		popularNetwork: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			marginVertical: 10,
+		},
+		tabUnderlineStyle: {
+			height: 2,
+			backgroundColor: colors.blue,
+		},
+		tabStyle: {
+			paddingVertical: 8,
+		},
+		textStyle: {
+			...fontStyles.normal,
+			fontSize: 14,
+		},
+		popularNetworkImage: {
+			width: 20,
+			height: 20,
+			marginRight: 10,
+		},
+		popularWrapper: {
+			flexDirection: 'row',
+		},
+		icon: {
+			marginRight: 10,
+		},
+		placeholderStyle: {
+			color: colors.grey500,
+			borderRadius: 15,
+		},
+		button: {
+			flex: 1,
+		},
+		cancel: {
+			marginRight: 8,
+			backgroundColor: colors.white,
+			borderWidth: 1,
+		},
+		confirm: {
+			marginLeft: 8,
+		},
 	});
 
 const allNetworks = getAllNetworks();
@@ -114,6 +171,10 @@ class NetworkSettings extends PureComponent {
 		 * returns an array of onboarded networks
 		 */
 		networkOnboardedState: PropTypes.array,
+		/**
+		 * Indicates whether third party API mode is enabled
+		 */
+		thirdPartyApiMode: PropTypes.bool,
 	};
 
 	state = {
@@ -131,6 +192,9 @@ class NetworkSettings extends PureComponent {
 		initialState: undefined,
 		enableAction: false,
 		inputWidth: { width: '99%' },
+		showPopularNetworkModal: false,
+		popularNetwork: undefined,
+		showWarningModal: false,
 	};
 
 	inputRpcURL = React.createRef();
@@ -152,6 +216,7 @@ class NetworkSettings extends PureComponent {
 		this.updateNavBar();
 		const { route, frequentRpcList } = this.props;
 		const network = route.params?.network;
+		// if network is main, don't show popular network
 		let blockExplorerUrl, chainId, nickname, ticker, editable, rpcUrl;
 		// If no navigation param, user clicked on add network
 		if (network) {
@@ -500,7 +565,25 @@ class NetworkSettings extends PureComponent {
 		current && current.focus();
 	};
 
-	render() {
+	switchToMainnet = () => {
+		const { NetworkController, CurrencyRateController } = Engine.context;
+		CurrencyRateController.setNativeCurrency('ETH');
+		NetworkController.setProviderType(MAINNET);
+		this.props.thirdPartyApiMode &&
+			setTimeout(() => {
+				Engine.refreshTransactionHistory();
+			}, 1000);
+	};
+
+	removeRpcUrl = () => {
+		const { navigation } = this.props;
+		this.switchToMainnet();
+		const { PreferencesController } = Engine.context;
+		PreferencesController.removeFromFrequentRpcList(this.state.rpcUrl);
+		navigation.goBack();
+	};
+
+	customNetwork = (network) => {
 		const {
 			rpcUrl,
 			blockExplorerUrl,
@@ -521,6 +604,12 @@ class NetworkSettings extends PureComponent {
 		return (
 			<SafeAreaView style={styles.wrapper} testID={'new-rpc-screen'}>
 				<KeyboardAwareScrollView style={styles.informationWrapper}>
+				{!network && (
+					<WarningMessage
+						style={styles.warningContainer}
+						warningMessage={strings('networks.malicious_network_warning')}
+					/>
+				)}
 					<View style={styles.scrollWrapper}>
 						{addMode && (
 							<Text style={styles.title} testID={'rpc-screen-title'}>
@@ -622,6 +711,29 @@ class NetworkSettings extends PureComponent {
 					</View>
 					{(addMode || editable) && (
 						<View style={styles.buttonsWrapper}>
+							{editable ? (
+							<View style={styles.editableButtonsContainer}>
+								<StyledButton
+									type="danger"
+									onPress={this.removeRpcUrl}
+									testID={'network-delete-button'}
+									containerStyle={[styles.button, styles.cancel]}
+								>
+									<CustomText centered red>
+										{strings('app_settings.delete')}
+									</CustomText>
+								</StyledButton>
+								<StyledButton
+									type="confirm"
+									onPress={this.addRpcUrl}
+									testID={'network-add-button'}
+									containerStyle={[styles.button, styles.confirm]}
+									disabled={!enableAction || this.disabledByRpcUrl() || this.disabledByChainId()}
+								>
+									{strings('app_settings.network_save')}
+								</StyledButton>
+							</View>
+						) : (
 							<View style={styles.buttonsContainer}>
 								<StyledButton
 									type="confirm"
@@ -630,12 +742,99 @@ class NetworkSettings extends PureComponent {
 									containerStyle={styles.syncConfirm}
 									disabled={!enableAction || this.disabledByRpcUrl() || this.disabledByChainId()}
 								>
-									{editable
-										? strings('app_settings.network_save')
-										: strings('app_settings.network_add')}
+									{strings('app_settings.network_add')}
 								</StyledButton>
 							</View>
-						</View>
+						)}
+					</View>
+				)}
+			</KeyboardAwareScrollView>
+			</SafeAreaView>
+		);
+	};
+
+	togglePopularNetwork = (network) => this.setState({ showPopularNetworkModal: true, popularNetwork: network });
+
+	onCancel = () => this.setState({ showPopularNetworkModal: false });
+
+	toggleWarningModal = () => this.setState({ showWarningModal: !this.state.showWarningModal });
+
+	goToLearnMore = () => Linking.openURL(strings('networks.learn_more_url'));
+
+	popularNetworks = () =>
+		PopularList.map((item, index) => (
+			<View key={index} style={styles.popularNetwork}>
+				{this.state.showWarningModal && (
+					<InfoModal
+						isVisible={this.state.showWarningModal}
+						message={strings('networks.network_warning')}
+						clickText={strings('networks.learn_more')}
+						clickPress={this.goToLearnMore}
+						toggleModal={this.toggleWarningModal}
+					/>
+				)}
+				<View style={styles.popularWrapper}>
+					<FadeIn placeholderStyle={styles.placeholderStyle}>
+						<Image source={{ uri: item.rpcPrefs.imageUrl || null }} style={styles.popularNetworkImage} />
+					</FadeIn>
+					<CustomText bold black>
+						{item.nickname}
+					</CustomText>
+				</View>
+				<View style={styles.popularWrapper}>
+					{item.warning && (
+						<WarningIcon
+							name="warning"
+							size={20}
+							color={colors.grey100}
+							style={styles.icon}
+							onPress={this.toggleWarningModal}
+						/>
+					)}
+					<CustomText link onPress={() => this.togglePopularNetwork(item)}>
+						{strings('networks.add')}
+					</CustomText>
+				</View>
+			</View>
+		));
+
+	renderTabBar = () => (
+		<DefaultTabBar
+			underlineStyle={styles.tabUnderlineStyle}
+			activeTextColor={colors.black}
+			inactiveTextColor={colors.fontTertiary}
+			backgroundColor={colors.white}
+			tabStyle={styles.tabStyle}
+			textStyle={styles.textStyle}
+		/>
+	);
+
+	render() {
+		const { navigation, route } = this.props;
+		const network = route.params?.network;
+
+		return (
+			<SafeAreaView style={styles.wrapper} testID={'new-rpc-screen'}>
+				<KeyboardAwareScrollView style={styles.informationWrapper}>
+					{network ? (
+						this.customNetwork(network)
+					) : (
+						<ScrollableTabView renderTabBar={this.renderTabBar}>
+							<View tabLabel={strings('app_settings.popular')} key={'popular'}>
+								{this.popularNetworks()}
+								{this.state.showPopularNetworkModal && (
+									<NetworkModals
+										isVisible={this.state.showPopularNetworkModal}
+										onClose={this.onCancel}
+										network={this.state.popularNetwork}
+										navigation={navigation}
+									/>
+								)}
+							</View>
+							<View tabLabel={strings('app_settings.custom_network_name')} key={'custom'}>
+								{this.customNetwork()}
+							</View>
+						</ScrollableTabView>
 					)}
 				</KeyboardAwareScrollView>
 			</SafeAreaView>
@@ -652,6 +851,7 @@ const mapDispatchToProps = (dispatch) => ({
 const mapStateToProps = (state) => ({
 	frequentRpcList: state.engine.backgroundState.PreferencesController.frequentRpcList,
 	networkOnboardedState: state.networkOnboarded.networkOnboardedState,
+	thirdPartyApiMode: state.privacy.thirdPartyApiMode,
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(NetworkSettings);
