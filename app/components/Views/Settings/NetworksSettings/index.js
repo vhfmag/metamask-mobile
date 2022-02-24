@@ -6,10 +6,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import ActionSheet from 'react-native-actionsheet';
 import { fontStyles } from '../../../../styles/common';
 import CustomText from '../../../../components/Base/Text';
+import AssetIcon from '../../../../components/UI/AssetIcon';
 import { getNavigationOptionsTitle } from '../../../UI/Navbar';
 import { strings } from '../../../../../locales/i18n';
 import Networks, { getAllNetworks } from '../../../../util/networks';
 import StyledButton from '../../../UI/StyledButton';
+import PopularList from '../../../../util/networks/customNetworks';
 import Engine from '../../../../core/Engine';
 import { MAINNET, RPC } from '../../../../constants/network';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
@@ -25,18 +27,11 @@ const createStyles = (colors) =>
 			marginBottom: 24,
 		},
 		networkIcon: {
-			width: 15,
-			height: 15,
-			borderRadius: 100,
+			width: 20,
+			height: 20,
+			borderRadius: 10,
 			marginTop: 2,
 			marginRight: 16,
-		},
-		otherNetworkIcon: {
-			width: 15,
-			height: 15,
-			borderRadius: 100,
-			marginTop: 2,
-			backgroundColor: colors.icon.muted,
 		},
 		network: {
 			flex: 1,
@@ -80,6 +75,12 @@ const createStyles = (colors) =>
 		},
 		no_match_text: {
 			marginVertical: 10,
+		},
+		text: {
+			textAlign: 'center',
+			color: colors.white100,
+			fontSize: 10,
+			marginTop: 4,
 		},
 	});
 
@@ -176,23 +177,35 @@ class NetworksSettings extends PureComponent {
 
 	onActionSheetPress = (index) => (index === 0 ? this.removeNetwork() : null);
 
-	networkElement(name, color, i, network, isCustomRPC) {
+	networkElement(name, image, i, network, isCustomRPC) {
 		const colors = this.context.colors || mockTheme.colors;
 		const styles = createStyles(colors);
-
 		return (
-			<TouchableOpacity
-				key={`network-${i}`}
-				onPress={() => this.onNetworkPress(network)} // eslint-disable-line
-				onLongPress={() => isCustomRPC && this.showRemoveMenu(network)} // eslint-disable-line
-				testID={'select-network'}
-			>
-				<View style={styles.network}>
-					<View style={[styles.networkIcon, color ? { backgroundColor: color } : styles.otherNetworkIcon]} />
-					<Text style={styles.networkLabel}>{name}</Text>
-					{!isCustomRPC && <FontAwesome name="lock" size={20} color={colors.grey100} style={styles.icon} />}
-				</View>
-			</TouchableOpacity>
+			<View key={`network-${network}`}>
+				{network === MAINNET ? (
+					this.renderMainnet()
+				) : (
+					<TouchableOpacity
+						key={`network-${i}`}
+						onPress={() => this.onNetworkPress(network)} // eslint-disable-line
+						onLongPress={() => isCustomRPC && this.showRemoveMenu(network)} // eslint-disable-line
+						testID={'select-network'}
+					>
+						<View style={styles.network}>
+							{isCustomRPC && <AssetIcon logo={image} customStyle={styles.networkIcon} />}
+							{!isCustomRPC && (
+								<View style={[styles.networkIcon, { backgroundColor: image }]}>
+									<Text style={styles.text}>{name[0]}</Text>
+								</View>
+							)}
+							<Text style={styles.networkLabel}>{name}</Text>
+							{!isCustomRPC && (
+								<FontAwesome name="lock" size={20} color={colors.grey100} style={styles.icon} />
+							)}
+						</View>
+					</TouchableOpacity>
+				)}
+			</View>
 		);
 	}
 
@@ -203,11 +216,18 @@ class NetworksSettings extends PureComponent {
 		});
 	}
 
+	showImage = (chainId) => {
+		const customNetworkData = PopularList.filter((x) => x.chainId === chainId);
+		const image = customNetworkData.length > 0 ? customNetworkData[0].rpcPrefs.imageUrl : null;
+		return image;
+	};
+
 	renderRpcNetworks = () => {
 		const { frequentRpcList } = this.props;
-		return frequentRpcList.map(({ rpcUrl, nickname }, i) => {
-			const { color, name } = { name: nickname || rpcUrl, color: null };
-			return this.networkElement(name, color, i, rpcUrl, true);
+		return frequentRpcList.map(({ rpcUrl, nickname, chainId }, i) => {
+			const { name } = { name: nickname || rpcUrl };
+			const image = this.showImage(chainId);
+			return this.networkElement(name, image, i, rpcUrl, true);
 		});
 	};
 
@@ -239,7 +259,7 @@ class NetworksSettings extends PureComponent {
 					onPress={() => this.onNetworkPress(MAINNET)} // eslint-disable-line
 				>
 					<View style={styles.networkWrapper}>
-						<View style={[styles.networkIcon, { backgroundColor: mainnetColor }]} />
+						<AssetIcon logo={'eth.svg'} customStyle={styles.networkIcon} />
 						<View style={styles.networkInfo}>
 							<Text style={styles.networkLabel}>{mainnetName}</Text>
 						</View>
@@ -257,8 +277,13 @@ class NetworksSettings extends PureComponent {
 			return { name, color, network, isCustomRPC: false };
 		});
 		const customRPC = this.props.frequentRpcList.map((network, i) => {
-			const { color, name, url } = { name: network.nickname || network.rpcUrl, url: network.rpcUrl, color: null };
-			return { name, color, i, network: url, isCustomRPC: true };
+			const { color, name, url, chainId } = {
+				name: network.nickname || network.rpcUrl,
+				url: network.rpcUrl,
+				color: null,
+				chainId: network.chainId,
+			};
+			return { name, color, i, network: url, isCustomRPC: true, chainId };
 		});
 
 		const allActiveNetworks = defaultNetwork.concat(customRPC);
@@ -270,9 +295,11 @@ class NetworksSettings extends PureComponent {
 
 	filteredResult = () => {
 		if (this.state.filteredNetworks.length > 0) {
-			return this.state.filteredNetworks.map((network, i) =>
-				this.networkElement(network.name, network.color || null, i, network.network, network.isCustomRPC)
-			);
+			return this.state.filteredNetworks.map((data, i) => {
+				const { network, chainId, name, color, isCustomRPC } = data;
+				const image = this.showImage(chainId);
+				return this.networkElement(name, image || color, i, network, isCustomRPC);
+			});
 		}
 		return <CustomText style={styles.no_match_text}>{strings('networks.no_match')}</CustomText>;
 	};
