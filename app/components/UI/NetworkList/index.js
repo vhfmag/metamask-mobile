@@ -7,7 +7,6 @@ import { colors as importedColors, fontStyles } from '../../../styles/common';
 import { strings } from '../../../../locales/i18n';
 import Networks, { getAllNetworks, isSafeChainId } from '../../../util/networks';
 import { connect } from 'react-redux';
-import AssetIcon from '../AssetIcon';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AnalyticsV2 from '../../../util/analyticsV2';
 import StyledButton from '../StyledButton';
@@ -17,6 +16,7 @@ import { ETH } from '../../../util/custom-gas';
 import sanitizeUrl from '../../../util/sanitizeUrl';
 import getImage from '../../../util/getImage';
 import { NETWORK_LIST_MODAL_CONTAINER_ID, NETWORK_SCROLL_ID } from '../../../constants/test-ids';
+import ImageIcon from '../ImageIcon';
 
 const createStyles = (colors) =>
 	StyleSheet.create({
@@ -246,7 +246,12 @@ export class NetworkList extends PureComponent {
 				onPress={() => onPress(network)} // eslint-disable-line
 			>
 				<View style={styles.selected}>{selected}</View>
-				{isCustomRpc && <AssetIcon logo={image} customStyle={styles.networkIcon} />}
+				{isCustomRpc &&
+				(image ? (
+					<ImageIcon image={image} style={styles.networkIcon} />
+				) : (
+					<View style={[styles.networkIcon, { backgroundColor: colors.grey000 }]} />
+				))}
 				{!isCustomRpc && (
 				<View style={[styles.networkIcon, { backgroundColor: image }]}>
 					<Text style={styles.text}>{name[0]}</Text>
@@ -307,7 +312,7 @@ export class NetworkList extends PureComponent {
 				>
 					<View style={styles.networkWrapper}>
 						<View style={[styles.selected, styles.mainnetSelected]}>{isMainnet}</View>
-						<AssetIcon logo={'eth.svg'} customStyle={styles.networkIcon} />
+						<ImageIcon image="ethereum" style={styles.networkIcon} />
 						<View style={styles.networkInfo}>
 							<Text style={styles.networkLabel}>{mainnetName}</Text>
 						</View>
