@@ -18,6 +18,10 @@ export default class NetworkView {
 		await TestHelpers.tap(ADD_NETWORK_BUTTON_ID);
 	}
 
+	static async switchToCustomNetworks() {
+		await TestHelpers.tapByText('Custom networks');
+	}
+
 	static async tapNetworks() {
 		await TestHelpers.tapByText('Networks');
 	}
