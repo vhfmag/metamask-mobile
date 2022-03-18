@@ -18,6 +18,7 @@ export default function setupSentry() {
 		dsn,
 		debug: __DEV__,
 		environment,
+		defaultIntegrations: false,
 		integrations: [
 			new Dedupe(),
 			new ExtraErrorData(),

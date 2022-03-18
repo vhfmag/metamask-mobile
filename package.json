@@ -234,6 +234,7 @@
     "redux-persist-filesystem-storage": "^3.0.0",
     "reselect": "^4.0.0",
     "rn-fetch-blob": "^0.12.0",
+    "ses": "0.15.11",
     "stream-browserify": "1.0.0",
     "swappable-obj-proxy": "^1.1.0",
     "through2": "3.0.1",

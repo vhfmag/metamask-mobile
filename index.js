@@ -1,4 +1,5 @@
 import './shim.js';
+import 'ses';
 
 import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
@@ -64,6 +65,9 @@ LogBox.ignoreLogs([
 /* Uncomment and comment regular registration below */
 // import Storybook from './storybook';
 // AppRegistry.registerComponent(name, () => Storybook);
+
+// eslint-disable-next-line
+lockdown({consoleTaming: 'unsafe'});
 
 /**
  * Application entry point responsible for registering root component

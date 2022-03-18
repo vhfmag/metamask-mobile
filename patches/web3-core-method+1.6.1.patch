@@ -1,0 +1,13 @@
+diff --git a/node_modules/web3-core-method/lib/index.js b/node_modules/web3-core-method/lib/index.js
+index 18e471d..cc5375e 100644
+--- a/node_modules/web3-core-method/lib/index.js
++++ b/node_modules/web3-core-method/lib/index.js
+@@ -68,7 +68,7 @@ Method.prototype.createFunction = function (requestManager, accounts) {
+ };
+ Method.prototype.attachToObject = function (obj) {
+     var func = this.buildCall();
+-    func.call = this.call;
++    Object.defineProperty(this, 'call', { value: this.call });
+     var name = this.name.split('.');
+     if (name.length > 1) {
+         obj[name[0]] = obj[name[0]] || {};
