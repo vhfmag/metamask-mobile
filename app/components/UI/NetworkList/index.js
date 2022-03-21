@@ -109,10 +109,11 @@ const createStyles = (colors) =>
 			position: 'absolute',
 			right: 0,
 			padding: 15,
+			color: colors.icon.default,
 		},
 		text: {
 			textAlign: 'center',
-			color: colors.white100,
+			color: colors.text.default,
 			fontSize: 10,
 			marginTop: 4,
 		},
@@ -251,7 +252,7 @@ export class NetworkList extends PureComponent {
 					(image ? (
 						<ImageIcon image={image} style={styles.networkIcon} />
 					) : (
-						<View style={[styles.networkIcon, { backgroundColor: colors.grey000 }]} />
+						<View style={[styles.networkIcon, { backgroundColor: colors.background.alternative }]} />
 					))}
 				{!isCustomRpc && (
 					<View style={[styles.networkIcon, { backgroundColor: image }]}>
@@ -313,7 +314,7 @@ export class NetworkList extends PureComponent {
 				>
 					<View style={styles.networkWrapper}>
 						<View style={[styles.selected, styles.mainnetSelected]}>{isMainnet}</View>
-						<ImageIcon image="ethereum" style={styles.networkIcon} />
+						<ImageIcon image="ETHEREUM" style={styles.networkIcon} />
 						<View style={styles.networkInfo}>
 							<Text style={styles.networkLabel}>{mainnetName}</Text>
 						</View>

@@ -32,6 +32,7 @@ import { ThemeContext, mockTheme } from '../../../../../util/theme';
 import { PRIVATENETWORK } from '../../../../../constants/network';
 import { showNetworkOnboardingAction } from '../../../../../actions/onboardNetwork';
 import sanitizeUrl from '../../../../../util/sanitizeUrl';
+import {REMOVE_NETWORK_ID, ADD_NETWORK_ID, RPC_SCREEN, ADD_NETWORK_BUTTON_ID} from '../../../../../constants/test-ids'
 
 const createStyles = (colors) =>
 	StyleSheet.create({
@@ -107,7 +108,7 @@ const createStyles = (colors) =>
 		},
 		tabUnderlineStyle: {
 			height: 2,
-			backgroundColor: colors.blue,
+			backgroundColor: colors.background.default,
 		},
 		tabStyle: {
 			paddingVertical: 8,
@@ -120,6 +121,8 @@ const createStyles = (colors) =>
 			width: 20,
 			height: 20,
 			marginRight: 10,
+			backgroundColor: colors.overlay.default,
+			borderRadius: 10,
 		},
 		popularWrapper: {
 			flexDirection: 'row',
@@ -712,7 +715,7 @@ class NetworkSettings extends PureComponent {
 									<StyledButton
 										type="danger"
 										onPress={this.removeRpcUrl}
-										testID={'network-delete-button'}
+										testID={REMOVE_NETWORK_ID}
 										containerStyle={[styles.button, styles.cancel]}
 									>
 										<CustomText centered red>
@@ -722,7 +725,7 @@ class NetworkSettings extends PureComponent {
 									<StyledButton
 										type="confirm"
 										onPress={this.addRpcUrl}
-										testID={'network-add-button'}
+										testID={ADD_NETWORK_ID}
 										containerStyle={[styles.button, styles.confirm]}
 										disabled={!enableAction || this.disabledByRpcUrl() || this.disabledByChainId()}
 									>
@@ -734,7 +737,7 @@ class NetworkSettings extends PureComponent {
 									<StyledButton
 										type="confirm"
 										onPress={this.addRpcUrl}
-										testID={'network-add-button'}
+										testID={ADD_NETWORK_BUTTON_ID}
 										containerStyle={styles.syncConfirm}
 										disabled={!enableAction || this.disabledByRpcUrl() || this.disabledByChainId()}
 									>
@@ -777,16 +780,14 @@ class NetworkSettings extends PureComponent {
 				)}
 				<View style={styles.popularWrapper}>
 					<ImageIcons image={item.rpcPrefs.imageUrl} style={styles.popularNetworkImage} />
-					<CustomText bold black>
-						{item.nickname}
-					</CustomText>
+					<CustomText bold>{item.nickname}</CustomText>
 				</View>
 				<View style={styles.popularWrapper}>
 					{item.warning && (
 						<WarningIcon
 							name="warning"
 							size={20}
-							color={colors.grey100}
+							color={colors.icon.default}
 							style={styles.icon}
 							onPress={this.toggleWarningModal}
 						/>
@@ -803,9 +804,9 @@ class NetworkSettings extends PureComponent {
 		return (
 			<DefaultTabBar
 				underlineStyle={styles.tabUnderlineStyle}
-				activeTextColor={colors.black}
-				inactiveTextColor={colors.fontTertiary}
-				backgroundColor={colors.white}
+				activeTextColor={colors.text.default}
+				inactiveTextColor={colors.text.muted}
+				backgroundColor={colors.background.default}
 				tabStyle={styles.tabStyle}
 				textStyle={styles.textStyle}
 			/>
@@ -819,7 +820,7 @@ class NetworkSettings extends PureComponent {
 		const styles = createStyles(colors);
 
 		return (
-			<SafeAreaView style={styles.wrapper} testID={'new-rpc-screen'}>
+			<SafeAreaView style={styles.wrapper} testID={RPC_SCREEN}>
 				<KeyboardAwareScrollView style={styles.informationWrapper}>
 					{network ? (
 						this.customNetwork(network)
