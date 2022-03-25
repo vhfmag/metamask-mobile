@@ -20,8 +20,10 @@ export const NETWORK_SCROLL_ID = 'other-networks-scroll';
 export const NETWORK_EDUCATION_MODAL_CONTAINER_ID = 'network-education-modal';
 export const NETWORK_EDUCATION_MODAL_CLOSE_BUTTON_ID = 'network-education-modal-close-button';
 export const NETWORK_EDUCATION_MODAL_NETWORK_NAME_ID = 'network-education-modal-network-name';
+export const APPROVE_NETWORK_MODAL_ID = 'approve-network-modal';
 export const APPROVE_NETWORK_APPROVE_BUTTON_ID = 'approve-network-approve-button';
 export const APPROVE_NETWORK_CANCEL_BUTTON_ID = 'approve-network-cancel-button';
+export const APPROVE_NETWORK_DISPLAY_NAME_ID = 'approve-network-display-name-id';
 
 export const REMOVE_NETWORK_ID = 'remove-network-button';
 export const ADD_NETWORK_ID = 'add-network-button';

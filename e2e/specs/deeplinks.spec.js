@@ -9,6 +9,7 @@ import ImportWalletView from '../pages/Onboarding/ImportWalletView';
 import OnboardingWizardModal from '../pages/modals/OnboardingWizardModal';
 import ConnectModal from '../pages/modals/ConnectModal';
 import NetworkEducationModal from '../pages/modals/NetworkEducationModal';
+import NetworkApprovalModal from '../pages/modals/NetworkApprovalModal';
 
 import { Browser } from '../pages/Drawer/Browser';
 import DrawerView from '../pages/Drawer/DrawerView';
@@ -103,13 +104,15 @@ describe('Deep linking Tests', () => {
 		await NetworkView.tapAddNetworkButton();
 
 		await NetworkView.isRpcViewVisible();
-		await NetworkView.typeInNetworkName('Binance Smart Chain Mainnet');
-		await NetworkView.typeInRpcUrl(BINANCE_RPC_URL);
-		await NetworkView.typeInChainId('56');
-		await NetworkView.typeInNetworkSymbol('BNB\n');
+		await NetworkView.tapPopularNetworkByName('Binance Smart Chain Mainnet');
 
-		await NetworkView.swipeToRPCTitleAndDismissKeyboard(); // Focus outside of text input field
-		await NetworkView.tapRpcNetworkAddButton();
+		await NetworkApprovalModal.isVisible();
+		await NetworkApprovalModal.isDisplayNameVisible('Binance Smart Chain Mainnet');
+		await NetworkApprovalModal.isNetworkURLVisible(BINANCE_RPC_URL);
+		await NetworkApprovalModal.isChainIDVisible('56');
+
+		await NetworkApprovalModal.tapApproveButton();
+		await NetworkApprovalModal.tapSwitchToNetwork();
 
 		await WalletView.isVisible();
 	});
@@ -139,14 +142,15 @@ describe('Deep linking Tests', () => {
 		await TestHelpers.delay(3000);
 		await NetworkView.tapAddNetworkButton();
 
-		await NetworkView.isRpcViewVisible();
-		await NetworkView.typeInNetworkName('Polygon Mainnet');
-		await NetworkView.typeInRpcUrl(POLYGON_RPC_URL);
-		await NetworkView.typeInChainId('137');
-		await NetworkView.typeInNetworkSymbol('MATIC\n');
+		await NetworkView.tapPopularNetworkByName('Polygon Mainnet');
 
-		await NetworkView.swipeToRPCTitleAndDismissKeyboard(); // Focus outside of text input field
-		await NetworkView.tapRpcNetworkAddButton();
+		await NetworkApprovalModal.isVisible();
+		await NetworkApprovalModal.isDisplayNameVisible('Polygon Mainnet');
+		await NetworkApprovalModal.isNetworkURLVisible(POLYGON_RPC_URL);
+		await NetworkApprovalModal.isChainIDVisible('137');
+
+		await NetworkApprovalModal.tapApproveButton();
+		await NetworkApprovalModal.tapClose();
 
 		await WalletView.isVisible();
 		await WalletView.isNetworkNameVisible('Polygon Mainnet');
@@ -193,6 +197,7 @@ describe('Deep linking Tests', () => {
 
 		await TransactionConfirmationView.isVisible();
 		await TransactionConfirmationView.isNetworkNameVisible('Ethereum Main Network');
+		await TransactionConfirmationView.tapCancelButton();
 	});
 
 	it('should deep link to a dapp (Uniswap)', async () => {
