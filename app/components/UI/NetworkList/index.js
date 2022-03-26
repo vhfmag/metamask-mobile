@@ -3,7 +3,7 @@ import Engine from '../../../core/Engine';
 import PropTypes from 'prop-types';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { ScrollView, TouchableOpacity, StyleSheet, Text, View, SafeAreaView } from 'react-native';
-import { colors as importedColors, fontStyles } from '../../../styles/common';
+import { fontStyles } from '../../../styles/common';
 import { strings } from '../../../../locales/i18n';
 import Networks, { getAllNetworks, isSafeChainId } from '../../../util/networks';
 import { connect } from 'react-redux';
@@ -101,9 +101,7 @@ const createStyles = (colors) =>
 			marginTop: 3,
 		},
 		otherNetworkIcon: {
-			backgroundColor: importedColors.transparent,
-			borderColor: colors.border.muted,
-			borderWidth: 2,
+			backgroundColor: colors.overlay.alternative,
 		},
 		closeIcon: {
 			position: 'absolute',
@@ -239,7 +237,6 @@ export class NetworkList extends PureComponent {
 
 	networkElement = (selected, onPress, name, image, i, network, isCustomRpc) => {
 		const styles = this.getStyles();
-		const colors = this.context.colors || mockTheme.colors;
 
 		return (
 			<TouchableOpacity
@@ -250,9 +247,9 @@ export class NetworkList extends PureComponent {
 				<View style={styles.selected}>{selected}</View>
 				{isCustomRpc &&
 					(image ? (
-						<ImageIcon image={image} style={styles.networkIcon} />
+						<ImageIcon image={image} style={[styles.networkIcon, styles.otherNetworkIcon]} />
 					) : (
-						<View style={[styles.networkIcon, { backgroundColor: colors.background.alternative }]} />
+						<View style={[styles.networkIcon, styles.otherNetworkIcon]} />
 					))}
 				{!isCustomRpc && (
 					<View style={[styles.networkIcon, { backgroundColor: image }]}>
