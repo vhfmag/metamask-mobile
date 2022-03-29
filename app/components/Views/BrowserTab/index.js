@@ -54,6 +54,7 @@ import ErrorBoundary from '../ErrorBoundary';
 
 import { getRpcMethodMiddleware } from '../../../core/RPCMethods/RPCMethodMiddleware';
 import { useAppThemeFromContext, mockTheme } from '../../../util/theme';
+import { DocumentDirectoryPath, downloadFile } from 'react-native-fs';
 
 const { HOMEPAGE_URL, USER_AGENT, NOTIFICATION_NAMES } = AppConstants;
 const HOMEPAGE_HOST = 'home.metamask.io';
@@ -1341,6 +1342,28 @@ export const BrowserTab = (props) => {
 		return null;
 	};
 
+	const downloadFiles = async (downloadUrl) => {
+		const fileName = downloadUrl.split('/').pop();
+		const path = `${DocumentDirectoryPath}/${fileName}`;
+		const fileExtension = downloadUrl.split('.').pop();
+		console.log('downloadFiles path', path);
+		console.log('downloadFiles url', downloadUrl);
+		console.log('downloadFiles fileName', fileName);
+		const options = {
+			fromUrl: downloadUrl,
+			toFile: path,
+		};
+		const response = await downloadFile(options);
+		return response.promise.then(async (res) => {
+			//Transform response
+			if (res && res.statusCode === 200 && res.bytesWritten > 0 && res.path) {
+				console.log("finished download");
+			} else {
+				Logger.error(res);
+			}
+		});
+	};
+
 	/**
 	 * Return to the MetaMask Dapp Homepage
 	 */
@@ -1379,6 +1402,7 @@ export const BrowserTab = (props) => {
 							allowsInlineMediaPlayback
 							useWebkit
 							testID={'browser-webview'}
+							onFileDownload={({ nativeEvent: { downloadUrl } }) => downloadFiles(downloadUrl)}
 						/>
 					)}
 				</View>
