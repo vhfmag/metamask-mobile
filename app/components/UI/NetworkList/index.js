@@ -23,7 +23,7 @@ const createStyles = (colors) =>
 		wrapper: {
 			backgroundColor: colors.background.default,
 			borderRadius: 10,
-			minHeight: 500,
+			minHeight: 470,
 		},
 		titleWrapper: {
 			borderBottomWidth: StyleSheet.hairlineWidth,
@@ -49,8 +49,8 @@ const createStyles = (colors) =>
 			flex: 1,
 		},
 		network: {
-			borderBottomWidth: StyleSheet.hairlineWidth,
 			borderColor: colors.border.muted,
+			borderTopWidth: StyleSheet.hairlineWidth,
 			flexDirection: 'row',
 			paddingHorizontal: 20,
 			paddingVertical: 20,
@@ -70,8 +70,6 @@ const createStyles = (colors) =>
 			...fontStyles.normal,
 		},
 		footer: {
-			borderTopWidth: StyleSheet.hairlineWidth,
-			borderColor: colors.border.muted,
 			marginVertical: 10,
 			flexDirection: 'row',
 		},
@@ -99,9 +97,6 @@ const createStyles = (colors) =>
 		mainnetSelected: {
 			marginLeft: -30,
 			marginTop: 3,
-		},
-		otherNetworkIcon: {
-			backgroundColor: colors.overlay.alternative,
 		},
 		closeIcon: {
 			position: 'absolute',
@@ -247,9 +242,9 @@ export class NetworkList extends PureComponent {
 				<View style={styles.selected}>{selected}</View>
 				{isCustomRpc &&
 					(image ? (
-						<ImageIcon image={image} style={[styles.networkIcon, styles.otherNetworkIcon]} />
+						<ImageIcon image={image} style={styles.networkIcon} />
 					) : (
-						<View style={[styles.networkIcon, styles.otherNetworkIcon]} />
+						<View style={styles.networkIcon} />
 					))}
 				{!isCustomRpc && (
 					<View style={[styles.networkIcon, { backgroundColor: image }]}>
