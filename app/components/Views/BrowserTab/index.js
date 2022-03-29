@@ -54,7 +54,7 @@ import ErrorBoundary from '../ErrorBoundary';
 
 import { getRpcMethodMiddleware } from '../../../core/RPCMethods/RPCMethodMiddleware';
 import { useAppThemeFromContext, mockTheme } from '../../../util/theme';
-import { DocumentDirectoryPath, downloadFile } from 'react-native-fs';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const { HOMEPAGE_URL, USER_AGENT, NOTIFICATION_NAMES } = AppConstants;
 const HOMEPAGE_HOST = 'home.metamask.io';
@@ -1343,25 +1343,20 @@ export const BrowserTab = (props) => {
 	};
 
 	const downloadFiles = async (downloadUrl) => {
+		const { config, fs } = RNFetchBlob;
+		const dir = fs.dirs.DownloadDir;
 		const fileName = downloadUrl.split('/').pop();
-		const path = `${DocumentDirectoryPath}/${fileName}`;
-		const fileExtension = downloadUrl.split('.').pop();
-		console.log('downloadFiles path', path);
-		console.log('downloadFiles url', downloadUrl);
-		console.log('downloadFiles fileName', fileName);
-		const options = {
-			fromUrl: downloadUrl,
-			toFile: path,
-		};
-		const response = await downloadFile(options);
-		return response.promise.then(async (res) => {
-			//Transform response
-			if (res && res.statusCode === 200 && res.bytesWritten > 0 && res.path) {
-				console.log("finished download");
-			} else {
-				Logger.error(res);
-			}
-		});
+		const downloadPath = `${dir}/${fileName}`;
+		config({
+			path: downloadPath,
+		})
+			.fetch('GET', downloadUrl)
+			.then((res) => {
+				RNFetchBlob.ios.previewDocument(res.data);
+				//Showing alert after successful downloading
+				console.log('res -> ', JSON.stringify(res));
+			})
+			.catch((err) => console.log('downloadFiles', err));
 	};
 
 	/**
