@@ -1343,8 +1343,9 @@ export const BrowserTab = (props) => {
 	};
 
 	const downloadFiles = async (downloadUrl) => {
+		console.log('downloadFiles called');
 		const { config, fs } = RNFetchBlob;
-		const dir = fs.dirs.DownloadDir;
+		const dir = fs.dirs.DocumentDir;
 		const fileName = downloadUrl.split('/').pop();
 		const downloadPath = `${dir}/${fileName}`;
 		config({
@@ -1354,9 +1355,9 @@ export const BrowserTab = (props) => {
 			.then((res) => {
 				RNFetchBlob.ios.previewDocument(res.data);
 				//Showing alert after successful downloading
-				console.log('res -> ', JSON.stringify(res));
+				console.log('downloadFiles res -> ', JSON.stringify(res));
 			})
-			.catch((err) => console.log('downloadFiles', err));
+			.catch((err) => console.log('downloadFiles error', err));
 	};
 
 	/**
@@ -1397,6 +1398,7 @@ export const BrowserTab = (props) => {
 							allowsInlineMediaPlayback
 							useWebkit
 							testID={'browser-webview'}
+							allowFileAccessFromFileURLs
 							onFileDownload={({ nativeEvent: { downloadUrl } }) => downloadFiles(downloadUrl)}
 						/>
 					)}
