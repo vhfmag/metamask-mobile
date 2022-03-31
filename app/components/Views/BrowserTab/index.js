@@ -1353,9 +1353,23 @@ export const BrowserTab = (props) => {
 		})
 			.fetch('GET', downloadUrl)
 			.then((res) => {
-				RNFetchBlob.ios.previewDocument(res.data);
 				//Showing alert after successful downloading
 				console.log('downloadFiles res -> ', JSON.stringify(res));
+				const filePath = res.path();
+				const options = {
+					title: 'Save file',
+					message: 'Where do you want this file to be saved?:',
+					url: filePath,
+					saveToFiles: true,
+				};
+
+				Share.open(options)
+					.then((res) => {
+						console.log('share result', res);
+					})
+					.catch((err) => {
+						err && console.log('share err', err);
+					});
 			})
 			.catch((err) => console.log('downloadFiles error', err));
 	};
