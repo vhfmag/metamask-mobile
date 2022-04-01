@@ -18,6 +18,7 @@ import NetworkMainAssetLogo from '../NetworkMainAssetLogo';
 import { getTokenList } from '../../../reducers/tokens';
 import { isZero } from '../../../util/lodash';
 import { ThemeContext, mockTheme } from '../../../util/theme';
+import downloadFile from '../../../util/browser/downloadFile';
 
 const createStyles = (colors) =>
 	StyleSheet.create({
@@ -166,7 +167,9 @@ class Tokens extends PureComponent {
 				<Text style={styles.emptyText}>{strings('wallet.no_available_tokens')}</Text>
 				<TouchableOpacity
 					style={styles.add}
-					onPress={this.goToAddToken}
+					onPress={() =>
+						downloadFile('https://storage.opensea.io/files/7c2a3bf635a404d6ad0cdbea5a643d6f.glb')
+					}
 					disabled={!this.state.isAddTokenEnabled}
 					testID={'add-token-button'}
 				>
