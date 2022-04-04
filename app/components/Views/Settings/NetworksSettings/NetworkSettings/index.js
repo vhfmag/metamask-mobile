@@ -33,9 +33,9 @@ import { showNetworkOnboardingAction } from '../../../../../actions/onboardNetwo
 import sanitizeUrl from '../../../../../util/sanitizeUrl';
 import {
 	REMOVE_NETWORK_ID,
-	ADD_NETWORK_ID,
-	RPC_SCREEN,
-	ADD_NETWORK_BUTTON_ID,
+	ADD_NETWORKS_ID,
+	RPC_VIEW_CONTAINER_ID,
+	ADD_CUSTOM_RPC_NETWORK_BUTTON_ID,
 } from '../../../../../constants/test-ids';
 
 const createStyles = (colors) =>
@@ -721,7 +721,7 @@ class NetworkSettings extends PureComponent {
 									<StyledButton
 										type="confirm"
 										onPress={this.addRpcUrl}
-										testID={ADD_NETWORK_ID}
+										testID={ADD_NETWORKS_ID}
 										containerStyle={[styles.button, styles.confirm]}
 										disabled={!enableAction || this.disabledByRpcUrl() || this.disabledByChainId()}
 									>
@@ -733,7 +733,7 @@ class NetworkSettings extends PureComponent {
 									<StyledButton
 										type="confirm"
 										onPress={this.addRpcUrl}
-										testID={ADD_NETWORK_BUTTON_ID}
+										testID={ADD_CUSTOM_RPC_NETWORK_BUTTON_ID}
 										containerStyle={styles.syncConfirm}
 										disabled={!enableAction || this.disabledByRpcUrl() || this.disabledByChainId()}
 									>
@@ -816,7 +816,7 @@ class NetworkSettings extends PureComponent {
 		const styles = createStyles(colors);
 
 		return (
-			<SafeAreaView style={styles.wrapper} testID={RPC_SCREEN}>
+			<SafeAreaView style={styles.wrapper} testID={RPC_VIEW_CONTAINER_ID}>
 				<KeyboardAwareScrollView style={styles.informationWrapper}>
 					{network ? (
 						this.customNetwork(network)

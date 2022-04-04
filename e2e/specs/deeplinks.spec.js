@@ -24,7 +24,6 @@ const SECRET_RECOVERY_PHRASE = 'fold media south add since false relax immense p
 const PASSWORD = `12345678`;
 
 const BINANCE_RPC_URL = 'https://bsc-dataseed1.binance.org';
-const POLYGON_RPC_URL = 'https://polygon-rpc.com/';
 
 const BINANCE_DEEPLINK_URL = 'https://metamask.app.link/send/0xB8B4EE5B1b693971eB60bDa15211570df2dB228A@56?value=1e14';
 
@@ -127,7 +126,7 @@ describe('Deep linking Tests', () => {
 	// });
 
 	it('should return to settings then networks', async () => {
-		await WalletView.isNetworkNameVisible('Binance Smart Chain Mainnet');
+		await WalletView.isNetworkNameVisible('BNB Smart Chain');
 		await WalletView.tapDrawerButton(); // tapping burger menu
 
 		// Open Drawer
@@ -148,7 +147,7 @@ describe('Deep linking Tests', () => {
 
 		await NetworkApprovalModal.isVisible();
 		await NetworkApprovalModal.isDisplayNameVisible('Polygon Mainnet');
-		await NetworkApprovalModal.isNetworkURLVisible(POLYGON_RPC_URL);
+		//await NetworkApprovalModal.isNetworkURLVisible(POLYGON_RPC_URL);
 		await NetworkApprovalModal.isChainIDVisible('137');
 
 		await NetworkApprovalModal.tapApproveButton();
@@ -181,7 +180,7 @@ describe('Deep linking Tests', () => {
 		await TestHelpers.openDeepLink(BINANCE_DEEPLINK_URL);
 		await TestHelpers.delay(4500);
 		await TransactionConfirmationView.isVisible();
-		await TransactionConfirmationView.isNetworkNameVisible('Binance Smart Chain Mainnet');
+		await TransactionConfirmationView.isNetworkNameVisible('BNB Smart Chain');
 	});
 
 	it('should deep link to the send flow on Rinkeby and submit the transaction', async () => {
