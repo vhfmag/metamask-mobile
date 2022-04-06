@@ -236,51 +236,6 @@ export const BrowserTab = (props) => {
 	const isTabActive = useCallback(() => props.activeTab === props.id, [props.activeTab, props.id]);
 
 	/**
-	 * Dismiss the text selection on the current website
-	 */
-	const dismissTextSelectionIfNeeded = useCallback(() => {
-		if (isTabActive() && Device.isAndroid()) {
-			const { current } = webviewRef;
-			if (current) {
-				setTimeout(() => {
-					current.injectJavaScript(JS_DESELECT_TEXT);
-				}, 50);
-			}
-		}
-	}, [isTabActive]);
-
-	/**
-	 * Toggle the options menu
-	 */
-	const toggleOptions = useCallback(() => {
-		dismissTextSelectionIfNeeded();
-		setShowOptions(!showOptions);
-		InteractionManager.runAfterInteractions(() => {
-			Analytics.trackEvent(ANALYTICS_EVENT_OPTS.DAPP_BROWSER_OPTIONS);
-		});
-	}, [dismissTextSelectionIfNeeded, showOptions]);
-
-	/**
-	 * Show the options menu
-	 */
-	const toggleOptionsIfNeeded = useCallback(() => {
-		if (showOptions) {
-			toggleOptions();
-		}
-	}, [showOptions, toggleOptions]);
-
-	/**
-	 * Go back to previous website in history
-	 */
-	const goBack = useCallback(() => {
-		if (!backEnabled) return;
-
-		toggleOptionsIfNeeded();
-		const { current } = webviewRef;
-		current && current.goBack();
-	}, [backEnabled, toggleOptionsIfNeeded]);
-
-	/**
 	 * Gets the url to be displayed to the user
 	 * For example, if it's ens then show [site].eth instead of ipfs url
 	 */
@@ -302,13 +257,6 @@ export const BrowserTab = (props) => {
 			}
 		}
 		return url;
-	};
-
-	const trackEventSearchUsed = () => {
-		AnalyticsV2.trackEvent(AnalyticsV2.ANALYTICS_EVENTS.BROWSER_SEARCH_USED, {
-			option_chosen: 'Search on URL',
-			number_of_tabs: undefined,
-		});
 	};
 
 	/**
@@ -334,137 +282,6 @@ export const BrowserTab = (props) => {
 		const { host: currentHost } = getUrlObj(currentPage);
 		return currentHost === HOMEPAGE_HOST;
 	}, []);
-
-	/**
-	 * Check if a hostname is allowed
-	 */
-	const isAllowedUrl = useCallback(
-		(hostname) => {
-			const { PhishingController } = Engine.context;
-			return (props.whitelist && props.whitelist.includes(hostname)) || !PhishingController.test(hostname);
-		},
-		[props.whitelist]
-	);
-
-	/**
-	 * Get IPFS info from a ens url
-	 */
-	const handleIpfsContent = useCallback(
-		async (fullUrl, { hostname, pathname, query }) => {
-			const { provider } = Engine.context.NetworkController;
-			let gatewayUrl;
-			try {
-				const { type, hash } = await resolveEnsToIpfsContentId({
-					provider,
-					name: hostname,
-				});
-				if (type === 'ipfs-ns') {
-					gatewayUrl = `${props.ipfsGateway}${hash}${pathname || '/'}${query || ''}`;
-					const response = await fetch(gatewayUrl);
-					const statusCode = response.status;
-					if (statusCode >= 400) {
-						Logger.log('Status code ', statusCode, gatewayUrl);
-						//urlNotFound(gatewayUrl);
-						return null;
-					}
-				} else if (type === 'swarm-ns') {
-					gatewayUrl = `${AppConstants.SWARM_DEFAULT_GATEWAY_URL}${hash}${pathname || '/'}${query || ''}`;
-				} else if (type === 'ipns-ns') {
-					gatewayUrl = `${AppConstants.IPNS_DEFAULT_GATEWAY_URL}${hostname}${pathname || '/'}${query || ''}`;
-				}
-				return {
-					url: gatewayUrl,
-					hash,
-					type,
-				};
-			} catch (err) {
-				// This is a TLD that might be a normal website
-				// For example .XYZ and might be more in the future
-				if (hostname.substr(-4) !== '.eth' && err.toString().indexOf('is not standard') !== -1) {
-					ensIgnoreList.push(hostname);
-					return { url: fullUrl, reload: true };
-				}
-				if (err?.message?.startsWith('EnsIpfsResolver - no known ens-ipfs registry for chainId')) {
-					trackErrorAsAnalytics('Browser: Failed to resolve ENS name for chainId', err?.message);
-				} else {
-					Logger.error(err, 'Failed to resolve ENS name');
-				}
-
-				Alert.alert(strings('browser.failed_to_resolve_ens_name'), err.message);
-				goBack();
-			}
-		},
-		[goBack, props.ipfsGateway]
-	);
-
-	/**
-	 * Show a phishing modal when a url is not allowed
-	 */
-	const handleNotAllowedUrl = (urlToGo) => {
-		setBlockedUrl(urlToGo);
-		setTimeout(() => setShowPhishingModal(true), 1000);
-	};
-
-	/**
-	 * Go to a url
-	 */
-	const go = useCallback(
-		async (url, initialCall) => {
-			const hasProtocol = url.match(/^[a-z]*:\/\//) || isHomepage(url);
-			const sanitizedURL = hasProtocol ? url : `${props.defaultProtocol}${url}`;
-			const { hostname, query, pathname } = new URL(sanitizedURL);
-
-			let urlToGo = sanitizedURL;
-			const isEnsUrl = isENSUrl(url);
-			const { current } = webviewRef;
-			if (isEnsUrl) {
-				current && current.stopLoading();
-				const { url: ensUrl, type, hash, reload } = await handleIpfsContent(url, { hostname, query, pathname });
-				if (reload) return go(ensUrl);
-				urlToGo = ensUrl;
-				sessionENSNames[urlToGo] = { hostname, hash, type };
-			}
-
-			if (isAllowedUrl(hostname)) {
-				if (initialCall || !firstUrlLoaded) {
-					setInitialUrl(urlToGo);
-					setFirstUrlLoaded(true);
-				} else {
-					current && current.injectJavaScript(`(function(){window.location.href = '${urlToGo}' })()`);
-				}
-
-				setProgress(0);
-				return sanitizedURL;
-			}
-			handleNotAllowedUrl(urlToGo);
-			return null;
-		},
-		[firstUrlLoaded, handleIpfsContent, isAllowedUrl, isHomepage, props.defaultProtocol]
-	);
-
-	/**
-	 * Handle url input submit
-	 */
-	const onUrlInputSubmit = useCallback(async (inputValue = undefined) => {
-		trackEventSearchUsed();
-		if (!inputValue) {
-			return;
-		}
-		const { defaultProtocol, searchEngine } = props;
-		const sanitizedInput = onUrlSubmit(inputValue, searchEngine, defaultProtocol);
-		await go(sanitizedInput);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
-
-	/**
-	 * Shows or hides the url input modal.
-	 * When opened it sets the current website url on the input.
-	 */
-	const toggleUrlModal = useCallback(() => {
-		const urlToShow = getMaskedUrl(url.current);
-		props.navigation.navigate('BrowserUrlModal', { url: urlToShow, onUrlInputSubmit });
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [onUrlInputSubmit]);
 
 	const notifyAllConnections = useCallback(
 		(payload, restricted = true) => {
@@ -543,6 +360,51 @@ export const BrowserTab = (props) => {
 	};
 
 	/**
+	 * Dismiss the text selection on the current website
+	 */
+	const dismissTextSelectionIfNeeded = useCallback(() => {
+		if (isTabActive() && Device.isAndroid()) {
+			const { current } = webviewRef;
+			if (current) {
+				setTimeout(() => {
+					current.injectJavaScript(JS_DESELECT_TEXT);
+				}, 50);
+			}
+		}
+	}, [isTabActive]);
+
+	/**
+	 * Toggle the options menu
+	 */
+	const toggleOptions = useCallback(() => {
+		dismissTextSelectionIfNeeded();
+		setShowOptions(!showOptions);
+		InteractionManager.runAfterInteractions(() => {
+			Analytics.trackEvent(ANALYTICS_EVENT_OPTS.DAPP_BROWSER_OPTIONS);
+		});
+	}, [dismissTextSelectionIfNeeded, showOptions]);
+
+	/**
+	 * Show the options menu
+	 */
+	const toggleOptionsIfNeeded = useCallback(() => {
+		if (showOptions) {
+			toggleOptions();
+		}
+	}, [showOptions, toggleOptions]);
+
+	/**
+	 * Go back to previous website in history
+	 */
+	const goBack = useCallback(() => {
+		if (!backEnabled) return;
+
+		toggleOptionsIfNeeded();
+		const { current } = webviewRef;
+		current && current.goBack();
+	}, [backEnabled, toggleOptionsIfNeeded]);
+
+	/**
 	 * Go forward to the next website in history
 	 */
 	const goForward = async () => {
@@ -552,6 +414,17 @@ export const BrowserTab = (props) => {
 		const { current } = webviewRef;
 		current && current.goForward && current.goForward();
 	};
+
+	/**
+	 * Check if a hostname is allowed
+	 */
+	const isAllowedUrl = useCallback(
+		(hostname) => {
+			const { PhishingController } = Engine.context;
+			return (props.whitelist && props.whitelist.includes(hostname)) || !PhishingController.test(hostname);
+		},
+		[props.whitelist]
+	);
 
 	const isBookmark = () => {
 		const { bookmarks } = props;
@@ -577,6 +450,102 @@ export const BrowserTab = (props) => {
 
 		current.injectJavaScript(homepageScripts);
 	};
+
+	/**
+	 * Show a phishing modal when a url is not allowed
+	 */
+	const handleNotAllowedUrl = (urlToGo) => {
+		setBlockedUrl(urlToGo);
+		setTimeout(() => setShowPhishingModal(true), 1000);
+	};
+
+	/**
+	 * Get IPFS info from a ens url
+	 */
+	const handleIpfsContent = useCallback(
+		async (fullUrl, { hostname, pathname, query }) => {
+			const { provider } = Engine.context.NetworkController;
+			let gatewayUrl;
+			try {
+				const { type, hash } = await resolveEnsToIpfsContentId({
+					provider,
+					name: hostname,
+				});
+				if (type === 'ipfs-ns') {
+					gatewayUrl = `${props.ipfsGateway}${hash}${pathname || '/'}${query || ''}`;
+					const response = await fetch(gatewayUrl);
+					const statusCode = response.status;
+					if (statusCode >= 400) {
+						Logger.log('Status code ', statusCode, gatewayUrl);
+						//urlNotFound(gatewayUrl);
+						return null;
+					}
+				} else if (type === 'swarm-ns') {
+					gatewayUrl = `${AppConstants.SWARM_DEFAULT_GATEWAY_URL}${hash}${pathname || '/'}${query || ''}`;
+				} else if (type === 'ipns-ns') {
+					gatewayUrl = `${AppConstants.IPNS_DEFAULT_GATEWAY_URL}${hostname}${pathname || '/'}${query || ''}`;
+				}
+				return {
+					url: gatewayUrl,
+					hash,
+					type,
+				};
+			} catch (err) {
+				// This is a TLD that might be a normal website
+				// For example .XYZ and might be more in the future
+				if (hostname.substr(-4) !== '.eth' && err.toString().indexOf('is not standard') !== -1) {
+					ensIgnoreList.push(hostname);
+					return { url: fullUrl, reload: true };
+				}
+				if (err?.message?.startsWith('EnsIpfsResolver - no known ens-ipfs registry for chainId')) {
+					trackErrorAsAnalytics('Browser: Failed to resolve ENS name for chainId', err?.message);
+				} else {
+					Logger.error(err, 'Failed to resolve ENS name');
+				}
+
+				Alert.alert(strings('browser.failed_to_resolve_ens_name'), err.message);
+				goBack();
+			}
+		},
+		[goBack, props.ipfsGateway]
+	);
+
+	/**
+	 * Go to a url
+	 */
+	const go = useCallback(
+		async (url, initialCall) => {
+			const hasProtocol = url.match(/^[a-z]*:\/\//) || isHomepage(url);
+			const sanitizedURL = hasProtocol ? url : `${props.defaultProtocol}${url}`;
+			const { hostname, query, pathname } = new URL(sanitizedURL);
+
+			let urlToGo = sanitizedURL;
+			const isEnsUrl = isENSUrl(url);
+			const { current } = webviewRef;
+			if (isEnsUrl) {
+				current && current.stopLoading();
+				const { url: ensUrl, type, hash, reload } = await handleIpfsContent(url, { hostname, query, pathname });
+				if (reload) return go(ensUrl);
+				urlToGo = ensUrl;
+				sessionENSNames[urlToGo] = { hostname, hash, type };
+			}
+
+			if (isAllowedUrl(hostname)) {
+				if (initialCall || !firstUrlLoaded) {
+					setInitialUrl(urlToGo);
+					setFirstUrlLoaded(true);
+				} else {
+					current && current.injectJavaScript(`(function(){window.location.href = '${urlToGo}' })()`);
+				}
+
+				setProgress(0);
+				return sanitizedURL;
+			}
+			handleNotAllowedUrl(urlToGo);
+			return null;
+		},
+		[firstUrlLoaded, handleIpfsContent, isAllowedUrl, isHomepage, props.defaultProtocol]
+	);
 
 	/**
 	 * Open a new tab
@@ -630,21 +599,6 @@ export const BrowserTab = (props) => {
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
-
-	/**
-	 * Enable the header to toggle the url modal and update other header data
-	 */
-	useEffect(() => {
-		if (props.activeTab === props.id) {
-			props.navigation.setParams({
-				showUrlModal: toggleUrlModal,
-				url: getMaskedUrl(url.current),
-				icon: icon.current,
-				error,
-			});
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [error, props.activeTab, props.id, toggleUrlModal]);
 
 	useEffect(() => {
 		if (Device.isAndroid()) {
@@ -792,6 +746,13 @@ export const BrowserTab = (props) => {
 		</Modal>
 	);
 
+	const trackEventSearchUsed = () => {
+		AnalyticsV2.trackEvent(AnalyticsV2.ANALYTICS_EVENTS.BROWSER_SEARCH_USED, {
+			option_chosen: 'Search on URL',
+			number_of_tabs: undefined,
+		});
+	};
+
 	/**
 	 * Stops normal loading when it's ens, instead call go to be properly set up
 	 */
@@ -923,6 +884,45 @@ export const BrowserTab = (props) => {
 		await go(HOMEPAGE_URL);
 		Analytics.trackEvent(ANALYTICS_EVENT_OPTS.DAPP_HOME);
 	};
+
+	/**
+	 * Handle url input submit
+	 */
+	const onUrlInputSubmit = useCallback(async (inputValue = undefined) => {
+		trackEventSearchUsed();
+		if (!inputValue) {
+			return;
+		}
+		const { defaultProtocol, searchEngine } = props;
+		const sanitizedInput = onUrlSubmit(inputValue, searchEngine, defaultProtocol);
+		await go(sanitizedInput);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	/**
+	 * Shows or hides the url input modal.
+	 * When opened it sets the current website url on the input.
+	 */
+	const toggleUrlModal = useCallback(() => {
+		const urlToShow = getMaskedUrl(url.current);
+		props.navigation.navigate('BrowserUrlModal', { url: urlToShow, onUrlInputSubmit });
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [onUrlInputSubmit]);
+
+	/**
+	 * Enable the header to toggle the url modal and update other header data
+	 */
+	useEffect(() => {
+		if (props.activeTab === props.id) {
+			props.navigation.setParams({
+				showUrlModal: toggleUrlModal,
+				url: getMaskedUrl(url.current),
+				icon: icon.current,
+				error,
+			});
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [error, props.activeTab, props.id, toggleUrlModal]);
 
 	/**
 	 * Render the progress bar
@@ -1251,7 +1251,6 @@ export const BrowserTab = (props) => {
 				</View>
 				{renderProgressBar()}
 				{isTabActive() && renderPhishingModal()}
-				{/* {isTabActive() && renderUrlModal()} */}
 				{isTabActive() && renderOptions()}
 				{isTabActive() && renderBottomBar()}
 				{isTabActive() && renderOnboardingWizard()}
