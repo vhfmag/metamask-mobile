@@ -1207,10 +1207,11 @@ export const BrowserTab = (props) => {
 
 	const handleOnFileDownload = async (downloadUrl) => {
 		const downloadResponse = await downloadFile(downloadUrl);
+		// might need to handle these differently
 		if (downloadResponse.success) {
-			onLoadEnd();
+			setProgress(1);
 		} else {
-			onError();
+			setProgress(1);
 		}
 	};
 
