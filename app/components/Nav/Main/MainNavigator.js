@@ -95,12 +95,16 @@ const BrowserModalFlow = () => (
 		screenOptions={{ cardStyle: { backgroundColor: importedColors.transparent } }}
 	>
 		<Stack.Screen name={BROWSER_VIEW} component={Browser} />
-		<Stack.Screen name={BROWSER_URL_MODAL} component={BrowserUrlModal} options={{ animationEnabled: false, headerShown: false }} />
+		<Stack.Screen
+			name={BROWSER_URL_MODAL}
+			component={BrowserUrlModal}
+			options={{ animationEnabled: false, headerShown: false }}
+		/>
 	</Stack.Navigator>
 );
 
 const BrowserTabHome = () => (
-	<Stack.Navigator screenOptions={{headerShown: false}}>
+	<Stack.Navigator screenOptions={{ headerShown: false }}>
 		<Stack.Screen name={BROWSER_VIEW} component={BrowserModalFlow} />
 	</Stack.Navigator>
 );

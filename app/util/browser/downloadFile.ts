@@ -18,7 +18,6 @@ const shareFile = async (filePath: string) => {
 };
 
 const downloadFile = async (downloadUrl: string): Promise<DownloadResult> => {
-	console.log('downloadFiles called');
 	const { config } = RNFetchBlob;
 	const response: FetchBlobResponse = await config({ fileCache: true }).fetch('GET', downloadUrl);
 	if (response.path()) {

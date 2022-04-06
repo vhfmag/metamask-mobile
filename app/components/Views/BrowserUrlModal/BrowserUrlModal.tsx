@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import ReusableModal, { ReusableModalRef } from '../../UI/ReusableModal';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -22,10 +22,10 @@ const BrowserUrlModal = (props: Props) => {
 	const dismissModal = (cb?: () => void) => modalRef?.current?.dismissModal(cb);
 
 	/** Clear search input and focus */
-	const clearSearchInput = () => {
+	const clearSearchInput = useCallback(() => {
 		setAutocompleteValue(undefined);
 		inputRef.current?.focus?.();
-	};
+	}, []);
 
 	const triggerClose = () => dismissModal();
 	const triggerOnSubmit = () => dismissModal(() => onUrlInputSubmit(autocompleteValue));

@@ -2,13 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
 	Text,
 	StyleSheet,
-	TextInput,
 	View,
 	TouchableWithoutFeedback,
 	Alert,
-	TouchableOpacity,
 	Linking,
-	Keyboard,
 	BackHandler,
 	InteractionManager,
 } from 'react-native';
@@ -33,7 +30,6 @@ import Button from '../../UI/Button';
 import { strings } from '../../../../locales/i18n';
 import URL from 'url-parse';
 import Modal from 'react-native-modal';
-import UrlAutocomplete from '../../UI/UrlAutocomplete';
 import WebviewError from '../../UI/WebviewError';
 import { approveHost } from '../../../actions/privacy';
 import { addBookmark } from '../../../actions/bookmarks';
@@ -49,7 +45,6 @@ import setOnboardingWizardStep from '../../../actions/wizard';
 import OnboardingWizard from '../../UI/OnboardingWizard';
 import DrawerStatusTracker from '../../../core/DrawerStatusTracker';
 import EntryScriptWeb3 from '../../../core/EntryScriptWeb3';
-import { isEmulatorSync } from 'react-native-device-info';
 import ErrorBoundary from '../ErrorBoundary';
 
 import { getRpcMethodMiddleware } from '../../../core/RPCMethods/RPCMethodMiddleware';
@@ -59,8 +54,6 @@ import downloadFile from '../../../util/browser/downloadFile';
 const { HOMEPAGE_URL, USER_AGENT, NOTIFICATION_NAMES } = AppConstants;
 const HOMEPAGE_HOST = 'home.metamask.io';
 const MM_MIXPANEL_TOKEN = process.env.MM_MIXPANEL_TOKEN;
-
-const ANIMATION_TIMING = 300;
 
 const createStyles = (colors) =>
 	StyleSheet.create({
@@ -219,7 +212,6 @@ export const BrowserTab = (props) => {
 	const [initialUrl, setInitialUrl] = useState('');
 	const [firstUrlLoaded, setFirstUrlLoaded] = useState(false);
 	const [error, setError] = useState(null);
-	const [showUrlModal, setShowUrlModal] = useState(false);
 	const [showOptions, setShowOptions] = useState(false);
 	const [entryScriptWeb3, setEntryScriptWeb3] = useState(null);
 	const [showPhishingModal, setShowPhishingModal] = useState(false);
@@ -235,7 +227,7 @@ export const BrowserTab = (props) => {
 	const fromHomepage = useRef(false);
 	const wizardScrollAdjusted = useRef(false);
 
-	const { colors, themeAppearance } = useAppThemeFromContext() || mockTheme;
+	const { colors } = useAppThemeFromContext() || mockTheme;
 	const styles = createStyles(colors);
 
 	/**
@@ -453,31 +445,25 @@ export const BrowserTab = (props) => {
 	/**
 	 * Handle url input submit
 	 */
-	const onUrlInputSubmit = useCallback(
-		async (inputValue = undefined) => {
-			trackEventSearchUsed();
-			if (!inputValue) {
-				return;
-			}
-			const { defaultProtocol, searchEngine } = props;
-			const sanitizedInput = onUrlSubmit(inputValue, searchEngine, defaultProtocol);
-			await go(sanitizedInput);
-		},
-		[]
-	);
+	const onUrlInputSubmit = useCallback(async (inputValue = undefined) => {
+		trackEventSearchUsed();
+		if (!inputValue) {
+			return;
+		}
+		const { defaultProtocol, searchEngine } = props;
+		const sanitizedInput = onUrlSubmit(inputValue, searchEngine, defaultProtocol);
+		await go(sanitizedInput);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	/**
 	 * Shows or hides the url input modal.
 	 * When opened it sets the current website url on the input.
 	 */
 	const toggleUrlModal = useCallback(() => {
-		// const goingToShow = !showUrlModal;
 		const urlToShow = getMaskedUrl(url.current);
 		props.navigation.navigate('BrowserUrlModal', { url: urlToShow, onUrlInputSubmit });
-
-		// if (goingToShow && urlToShow) setAutocompleteValue(urlToShow);
-
-		// setShowUrlModal(goingToShow);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [onUrlInputSubmit]);
 
 	const notifyAllConnections = useCallback(
@@ -524,6 +510,7 @@ export const BrowserTab = (props) => {
 				params: [selectedAddress],
 			});
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [notifyAllConnections, props.approvedHosts, props.selectedAddress]);
 
 	const initializeBackgroundBridge = (urlBridge, isMainFrame) => {
@@ -546,8 +533,6 @@ export const BrowserTab = (props) => {
 					isHomepage,
 					// Show autocomplete
 					fromHomepage,
-					// setAutocompleteValue,
-					setShowUrlModal,
 					// Wizard
 					wizardScrollAdjusted,
 					tabId: props.id,
@@ -556,13 +541,6 @@ export const BrowserTab = (props) => {
 		});
 		backgroundBridges.current.push(newBridge);
 	};
-
-	/**
-	 * Disabling iframes for now
-	const onFrameLoadStarted = url => {
-		url && initializeBackgroundBridge(url, false);
-	};
-	*/
 
 	/**
 	 * Go forward to the next website in history
@@ -609,43 +587,9 @@ export const BrowserTab = (props) => {
 			dismissTextSelectionIfNeeded();
 			props.newTab(url);
 		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[dismissTextSelectionIfNeeded, toggleOptionsIfNeeded]
 	);
-
-	/**
-	 * Hide url input modal
-	 */
-	// const hideUrlModal = useCallback(() => {
-	// 	setShowUrlModal(false);
-
-	// 	if (isHomepage()) {
-	// 		const { current } = webviewRef;
-	// 		const blur = `document.getElementsByClassName('autocomplete-input')[0].blur();`;
-	// 		current && current.injectJavaScript(blur);
-	// 	}
-	// }, [isHomepage]);
-
-	// /**
-	//  * Handle keyboard hide
-	//  */
-	// const keyboardDidHide = useCallback(() => {
-	// 	if (!isTabActive() || isEmulatorSync()) return false;
-	// 	if (!fromHomepage.current) {
-	// 		if (showUrlModal) {
-	// 			hideUrlModal();
-	// 		}
-	// 	}
-	// }, [hideUrlModal, isTabActive, showUrlModal]);
-
-	// /**
-	//  * Set keyboard listeners
-	//  */
-	// useEffect(() => {
-	// 	const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', keyboardDidHide);
-	// 	return function cleanup() {
-	// 		keyboardDidHideListener.remove();
-	// 	};
-	// }, [keyboardDidHide]);
 
 	/**
 	 * Reload current page
@@ -684,6 +628,7 @@ export const BrowserTab = (props) => {
 			// Remove all Engine listeners
 			Engine.context.TokensController.hub.removeAllListeners();
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	/**
@@ -698,6 +643,7 @@ export const BrowserTab = (props) => {
 				error,
 			});
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [error, props.activeTab, props.id, toggleUrlModal]);
 
 	useEffect(() => {
@@ -737,6 +683,7 @@ export const BrowserTab = (props) => {
 		return function cleanup() {
 			BackHandler.removeEventListener('hardwareBackPress', handleAndroidBackPress);
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [goBack, isTabActive]);
 
 	/**
