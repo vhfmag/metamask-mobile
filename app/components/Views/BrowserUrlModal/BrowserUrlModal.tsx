@@ -72,4 +72,4 @@ const BrowserUrlModal = (props: Props) => {
 	);
 };
 
-export default BrowserUrlModal;
+export default React.memo(BrowserUrlModal);
