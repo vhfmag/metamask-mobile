@@ -218,7 +218,6 @@ export const BrowserTab = (props) => {
 	const [progress, setProgress] = useState(0);
 	const [initialUrl, setInitialUrl] = useState('');
 	const [firstUrlLoaded, setFirstUrlLoaded] = useState(false);
-	const [autocompleteValue, setAutocompleteValue] = useState('');
 	const [error, setError] = useState(null);
 	const [showUrlModal, setShowUrlModal] = useState(false);
 	const [showOptions, setShowOptions] = useState(false);
@@ -227,7 +226,6 @@ export const BrowserTab = (props) => {
 	const [blockedUrl, setBlockedUrl] = useState(undefined);
 
 	const webviewRef = useRef(null);
-	const inputRef = useRef(null);
 
 	const url = useRef('');
 	const title = useRef('');
@@ -244,156 +242,6 @@ export const BrowserTab = (props) => {
 	 * Is the current tab the active tab
 	 */
 	const isTabActive = useCallback(() => props.activeTab === props.id, [props.activeTab, props.id]);
-
-	/**
-	 * Gets the url to be displayed to the user
-	 * For example, if it's ens then show [site].eth instead of ipfs url
-	 */
-	const getMaskedUrl = (url) => {
-		if (!url) return url;
-		let replace = null;
-		if (url.startsWith(AppConstants.IPFS_DEFAULT_GATEWAY_URL)) {
-			replace = (key) => `${AppConstants.IPFS_DEFAULT_GATEWAY_URL}${sessionENSNames[key].hash}/`;
-		} else if (url.startsWith(AppConstants.IPNS_DEFAULT_GATEWAY_URL)) {
-			replace = (key) => `${AppConstants.IPNS_DEFAULT_GATEWAY_URL}${sessionENSNames[key].hostname}/`;
-		} else if (url.startsWith(AppConstants.SWARM_DEFAULT_GATEWAY_URL)) {
-			replace = (key) => `${AppConstants.SWARM_GATEWAY_URL}${sessionENSNames[key].hash}/`;
-		}
-
-		if (replace) {
-			const key = Object.keys(sessionENSNames).find((ens) => url.startsWith(ens));
-			if (key) {
-				url = url.replace(replace(key), `https://${sessionENSNames[key].hostname}/`);
-			}
-		}
-		return url;
-	};
-
-	/**
-	 * Shows or hides the url input modal.
-	 * When opened it sets the current website url on the input.
-	 */
-	const toggleUrlModal = useCallback(
-		({ urlInput = null } = {}) => {
-			const goingToShow = !showUrlModal;
-			const urlToShow = getMaskedUrl(urlInput || url.current);
-
-			if (goingToShow && urlToShow) setAutocompleteValue(urlToShow);
-
-			setShowUrlModal(goingToShow);
-		},
-		[showUrlModal]
-	);
-
-	/**
-	 * Checks if it is a ENS website
-	 */
-	const isENSUrl = (url) => {
-		const { hostname } = new URL(url);
-		const tld = hostname.split('.').pop();
-		if (AppConstants.supportedTLDs.indexOf(tld.toLowerCase()) !== -1) {
-			// Make sure it's not in the ignore list
-			if (ensIgnoreList.indexOf(hostname) === -1) {
-				return true;
-			}
-		}
-		return false;
-	};
-
-	/**
-	 * Checks if a given url or the current url is the homepage
-	 */
-	const isHomepage = useCallback((checkUrl = null) => {
-		const currentPage = checkUrl || url.current;
-		const { host: currentHost } = getUrlObj(currentPage);
-		return currentHost === HOMEPAGE_HOST;
-	}, []);
-
-	const notifyAllConnections = useCallback(
-		(payload, restricted = true) => {
-			const fullHostname = new URL(url.current).hostname;
-
-			// TODO:permissions move permissioning logic elsewhere
-			backgroundBridges.current.forEach((bridge) => {
-				if (
-					bridge.hostname === fullHostname &&
-					(!props.privacyMode || !restricted || approvedHosts[bridge.hostname])
-				) {
-					bridge.sendNotification(payload);
-				}
-			});
-		},
-		[props.privacyMode]
-	);
-
-	/**
-	 * Manage hosts that were approved to connect with the user accounts
-	 */
-	useEffect(() => {
-		const { approvedHosts: approvedHostsProps, selectedAddress } = props;
-
-		approvedHosts = approvedHostsProps;
-
-		const numApprovedHosts = Object.keys(approvedHosts).length;
-
-		// this will happen if the approved hosts were cleared
-		if (numApprovedHosts === 0) {
-			notifyAllConnections(
-				{
-					method: NOTIFICATION_NAMES.accountsChanged,
-					params: [],
-				},
-				false
-			); // notification should be sent regardless of approval status
-		}
-
-		if (numApprovedHosts > 0) {
-			notifyAllConnections({
-				method: NOTIFICATION_NAMES.accountsChanged,
-				params: [selectedAddress],
-			});
-		}
-
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [notifyAllConnections, props.approvedHosts, props.selectedAddress]);
-
-	const initializeBackgroundBridge = (urlBridge, isMainFrame) => {
-		const newBridge = new BackgroundBridge({
-			webview: webviewRef,
-			url: urlBridge,
-			getRpcMethodMiddleware: ({ hostname, getProviderState }) =>
-				getRpcMethodMiddleware({
-					hostname,
-					getProviderState,
-					navigation: props.navigation,
-					getApprovedHosts,
-					setApprovedHosts,
-					approveHost: props.approveHost,
-					// Website info
-					url,
-					title,
-					icon,
-					// Bookmarks
-					isHomepage,
-					// Show autocomplete
-					fromHomepage,
-					setAutocompleteValue,
-					setShowUrlModal,
-					// Wizard
-					wizardScrollAdjusted,
-					tabId: props.id,
-				}),
-			isMainFrame,
-		});
-		backgroundBridges.current.push(newBridge);
-	};
-
-	/**
-	 * Disabling iframes for now
-	const onFrameLoadStarted = url => {
-		url && initializeBackgroundBridge(url, false);
-	};
-	*/
 
 	/**
 	 * Dismiss the text selection on the current website
@@ -441,15 +289,59 @@ export const BrowserTab = (props) => {
 	}, [backEnabled, toggleOptionsIfNeeded]);
 
 	/**
-	 * Go forward to the next website in history
+	 * Gets the url to be displayed to the user
+	 * For example, if it's ens then show [site].eth instead of ipfs url
 	 */
-	const goForward = async () => {
-		if (!forwardEnabled) return;
+	const getMaskedUrl = (url) => {
+		if (!url) return url;
+		let replace = null;
+		if (url.startsWith(AppConstants.IPFS_DEFAULT_GATEWAY_URL)) {
+			replace = (key) => `${AppConstants.IPFS_DEFAULT_GATEWAY_URL}${sessionENSNames[key].hash}/`;
+		} else if (url.startsWith(AppConstants.IPNS_DEFAULT_GATEWAY_URL)) {
+			replace = (key) => `${AppConstants.IPNS_DEFAULT_GATEWAY_URL}${sessionENSNames[key].hostname}/`;
+		} else if (url.startsWith(AppConstants.SWARM_DEFAULT_GATEWAY_URL)) {
+			replace = (key) => `${AppConstants.SWARM_GATEWAY_URL}${sessionENSNames[key].hash}/`;
+		}
 
-		toggleOptionsIfNeeded();
-		const { current } = webviewRef;
-		current && current.goForward && current.goForward();
+		if (replace) {
+			const key = Object.keys(sessionENSNames).find((ens) => url.startsWith(ens));
+			if (key) {
+				url = url.replace(replace(key), `https://${sessionENSNames[key].hostname}/`);
+			}
+		}
+		return url;
 	};
+
+	const trackEventSearchUsed = () => {
+		AnalyticsV2.trackEvent(AnalyticsV2.ANALYTICS_EVENTS.BROWSER_SEARCH_USED, {
+			option_chosen: 'Search on URL',
+			number_of_tabs: undefined,
+		});
+	};
+
+	/**
+	 * Checks if it is a ENS website
+	 */
+	const isENSUrl = (url) => {
+		const { hostname } = new URL(url);
+		const tld = hostname.split('.').pop();
+		if (AppConstants.supportedTLDs.indexOf(tld.toLowerCase()) !== -1) {
+			// Make sure it's not in the ignore list
+			if (ensIgnoreList.indexOf(hostname) === -1) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	/**
+	 * Checks if a given url or the current url is the homepage
+	 */
+	const isHomepage = useCallback((checkUrl = null) => {
+		const currentPage = checkUrl || url.current;
+		const { host: currentHost } = getUrlObj(currentPage);
+		return currentHost === HOMEPAGE_HOST;
+	}, []);
 
 	/**
 	 * Check if a hostname is allowed
@@ -461,39 +353,6 @@ export const BrowserTab = (props) => {
 		},
 		[props.whitelist]
 	);
-
-	const isBookmark = () => {
-		const { bookmarks } = props;
-		const maskedUrl = getMaskedUrl(url.current);
-		return bookmarks.some(({ url: bookmark }) => bookmark === maskedUrl);
-	};
-
-	/**
-	 * Inject home page scripts to get the favourites and set analytics key
-	 */
-	const injectHomePageScripts = async () => {
-		const { current } = webviewRef;
-		if (!current) return;
-		const analyticsEnabled = Analytics.getEnabled();
-		const disctinctId = await Analytics.getDistinctId();
-		const homepageScripts = `
-			window.__mmFavorites = ${JSON.stringify(props.bookmarks)};
-			window.__mmSearchEngine = "${props.searchEngine}";
-			window.__mmMetametrics = ${analyticsEnabled};
-			window.__mmDistinctId = "${disctinctId}";
-			window.__mmMixpanelToken = "${MM_MIXPANEL_TOKEN}";
-		`;
-
-		current.injectJavaScript(homepageScripts);
-	};
-
-	/**
-	 * Show a phishing modal when a url is not allowed
-	 */
-	const handleNotAllowedUrl = (urlToGo) => {
-		setBlockedUrl(urlToGo);
-		setTimeout(() => setShowPhishingModal(true), 1000);
-	};
 
 	/**
 	 * Get IPFS info from a ens url
@@ -547,6 +406,14 @@ export const BrowserTab = (props) => {
 	);
 
 	/**
+	 * Show a phishing modal when a url is not allowed
+	 */
+	const handleNotAllowedUrl = (urlToGo) => {
+		setBlockedUrl(urlToGo);
+		setTimeout(() => setShowPhishingModal(true), 1000);
+	};
+
+	/**
 	 * Go to a url
 	 */
 	const go = useCallback(
@@ -584,6 +451,156 @@ export const BrowserTab = (props) => {
 	);
 
 	/**
+	 * Handle url input submit
+	 */
+	const onUrlInputSubmit = useCallback(
+		async (inputValue = undefined) => {
+			trackEventSearchUsed();
+			if (!inputValue) {
+				return;
+			}
+			const { defaultProtocol, searchEngine } = props;
+			const sanitizedInput = onUrlSubmit(inputValue, searchEngine, defaultProtocol);
+			await go(sanitizedInput);
+		},
+		[]
+	);
+
+	/**
+	 * Shows or hides the url input modal.
+	 * When opened it sets the current website url on the input.
+	 */
+	const toggleUrlModal = useCallback(() => {
+		// const goingToShow = !showUrlModal;
+		const urlToShow = getMaskedUrl(url.current);
+		props.navigation.navigate('BrowserUrlModal', { url: urlToShow, onUrlInputSubmit });
+
+		// if (goingToShow && urlToShow) setAutocompleteValue(urlToShow);
+
+		// setShowUrlModal(goingToShow);
+	}, [onUrlInputSubmit]);
+
+	const notifyAllConnections = useCallback(
+		(payload, restricted = true) => {
+			const fullHostname = new URL(url.current).hostname;
+
+			// TODO:permissions move permissioning logic elsewhere
+			backgroundBridges.current.forEach((bridge) => {
+				if (
+					bridge.hostname === fullHostname &&
+					(!props.privacyMode || !restricted || approvedHosts[bridge.hostname])
+				) {
+					bridge.sendNotification(payload);
+				}
+			});
+		},
+		[props.privacyMode]
+	);
+
+	/**
+	 * Manage hosts that were approved to connect with the user accounts
+	 */
+	useEffect(() => {
+		const { approvedHosts: approvedHostsProps, selectedAddress } = props;
+
+		approvedHosts = approvedHostsProps;
+
+		const numApprovedHosts = Object.keys(approvedHosts).length;
+
+		// this will happen if the approved hosts were cleared
+		if (numApprovedHosts === 0) {
+			notifyAllConnections(
+				{
+					method: NOTIFICATION_NAMES.accountsChanged,
+					params: [],
+				},
+				false
+			); // notification should be sent regardless of approval status
+		}
+
+		if (numApprovedHosts > 0) {
+			notifyAllConnections({
+				method: NOTIFICATION_NAMES.accountsChanged,
+				params: [selectedAddress],
+			});
+		}
+	}, [notifyAllConnections, props.approvedHosts, props.selectedAddress]);
+
+	const initializeBackgroundBridge = (urlBridge, isMainFrame) => {
+		const newBridge = new BackgroundBridge({
+			webview: webviewRef,
+			url: urlBridge,
+			getRpcMethodMiddleware: ({ hostname, getProviderState }) =>
+				getRpcMethodMiddleware({
+					hostname,
+					getProviderState,
+					navigation: props.navigation,
+					getApprovedHosts,
+					setApprovedHosts,
+					approveHost: props.approveHost,
+					// Website info
+					url,
+					title,
+					icon,
+					// Bookmarks
+					isHomepage,
+					// Show autocomplete
+					fromHomepage,
+					// setAutocompleteValue,
+					setShowUrlModal,
+					// Wizard
+					wizardScrollAdjusted,
+					tabId: props.id,
+				}),
+			isMainFrame,
+		});
+		backgroundBridges.current.push(newBridge);
+	};
+
+	/**
+	 * Disabling iframes for now
+	const onFrameLoadStarted = url => {
+		url && initializeBackgroundBridge(url, false);
+	};
+	*/
+
+	/**
+	 * Go forward to the next website in history
+	 */
+	const goForward = async () => {
+		if (!forwardEnabled) return;
+
+		toggleOptionsIfNeeded();
+		const { current } = webviewRef;
+		current && current.goForward && current.goForward();
+	};
+
+	const isBookmark = () => {
+		const { bookmarks } = props;
+		const maskedUrl = getMaskedUrl(url.current);
+		return bookmarks.some(({ url: bookmark }) => bookmark === maskedUrl);
+	};
+
+	/**
+	 * Inject home page scripts to get the favourites and set analytics key
+	 */
+	const injectHomePageScripts = async () => {
+		const { current } = webviewRef;
+		if (!current) return;
+		const analyticsEnabled = Analytics.getEnabled();
+		const disctinctId = await Analytics.getDistinctId();
+		const homepageScripts = `
+			window.__mmFavorites = ${JSON.stringify(props.bookmarks)};
+			window.__mmSearchEngine = "${props.searchEngine}";
+			window.__mmMetametrics = ${analyticsEnabled};
+			window.__mmDistinctId = "${disctinctId}";
+			window.__mmMixpanelToken = "${MM_MIXPANEL_TOKEN}";
+		`;
+
+		current.injectJavaScript(homepageScripts);
+	};
+
+	/**
 	 * Open a new tab
 	 */
 	const openNewTab = useCallback(
@@ -592,44 +609,43 @@ export const BrowserTab = (props) => {
 			dismissTextSelectionIfNeeded();
 			props.newTab(url);
 		},
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[dismissTextSelectionIfNeeded, toggleOptionsIfNeeded]
 	);
 
 	/**
 	 * Hide url input modal
 	 */
-	const hideUrlModal = useCallback(() => {
-		setShowUrlModal(false);
+	// const hideUrlModal = useCallback(() => {
+	// 	setShowUrlModal(false);
 
-		if (isHomepage()) {
-			const { current } = webviewRef;
-			const blur = `document.getElementsByClassName('autocomplete-input')[0].blur();`;
-			current && current.injectJavaScript(blur);
-		}
-	}, [isHomepage]);
+	// 	if (isHomepage()) {
+	// 		const { current } = webviewRef;
+	// 		const blur = `document.getElementsByClassName('autocomplete-input')[0].blur();`;
+	// 		current && current.injectJavaScript(blur);
+	// 	}
+	// }, [isHomepage]);
 
-	/**
-	 * Handle keyboard hide
-	 */
-	const keyboardDidHide = useCallback(() => {
-		if (!isTabActive() || isEmulatorSync()) return false;
-		if (!fromHomepage.current) {
-			if (showUrlModal) {
-				hideUrlModal();
-			}
-		}
-	}, [hideUrlModal, isTabActive, showUrlModal]);
+	// /**
+	//  * Handle keyboard hide
+	//  */
+	// const keyboardDidHide = useCallback(() => {
+	// 	if (!isTabActive() || isEmulatorSync()) return false;
+	// 	if (!fromHomepage.current) {
+	// 		if (showUrlModal) {
+	// 			hideUrlModal();
+	// 		}
+	// 	}
+	// }, [hideUrlModal, isTabActive, showUrlModal]);
 
-	/**
-	 * Set keyboard listeners
-	 */
-	useEffect(() => {
-		const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', keyboardDidHide);
-		return function cleanup() {
-			keyboardDidHideListener.remove();
-		};
-	}, [keyboardDidHide]);
+	// /**
+	//  * Set keyboard listeners
+	//  */
+	// useEffect(() => {
+	// 	const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', keyboardDidHide);
+	// 	return function cleanup() {
+	// 		keyboardDidHideListener.remove();
+	// 	};
+	// }, [keyboardDidHide]);
 
 	/**
 	 * Reload current page
@@ -668,8 +684,6 @@ export const BrowserTab = (props) => {
 			// Remove all Engine listeners
 			Engine.context.TokensController.hub.removeAllListeners();
 		};
-
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	/**
@@ -684,8 +698,6 @@ export const BrowserTab = (props) => {
 				error,
 			});
 		}
-
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [error, props.activeTab, props.id, toggleUrlModal]);
 
 	useEffect(() => {
@@ -725,8 +737,6 @@ export const BrowserTab = (props) => {
 		return function cleanup() {
 			BackHandler.removeEventListener('hardwareBackPress', handleAndroidBackPress);
 		};
-
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [goBack, isTabActive]);
 
 	/**
@@ -835,18 +845,10 @@ export const BrowserTab = (props) => {
 		</Modal>
 	);
 
-	const trackEventSearchUsed = () => {
-		AnalyticsV2.trackEvent(AnalyticsV2.ANALYTICS_EVENTS.BROWSER_SEARCH_USED, {
-			option_chosen: 'Search on URL',
-			number_of_tabs: undefined,
-		});
-	};
-
 	/**
 	 * Stops normal loading when it's ens, instead call go to be properly set up
 	 */
 	const onShouldStartLoadWithRequest = ({ url }) => {
-		console.log('onShouldStartLoadWithRequest');
 		if (isENSUrl(url)) {
 			go(url.replace(/^http:\/\//, 'https://'));
 			return false;
@@ -983,100 +985,6 @@ export const BrowserTab = (props) => {
 			<WebviewProgressBar progress={progress} />
 		</View>
 	);
-
-	/**
-	 * When url input changes
-	 */
-	const onURLChange = (inputValue) => {
-		setAutocompleteValue(inputValue);
-	};
-
-	/**
-	 * Handle url input submit
-	 */
-	const onUrlInputSubmit = async (input = null) => {
-		const inputValue = (typeof input === 'string' && input) || autocompleteValue;
-		trackEventSearchUsed();
-		if (!inputValue) {
-			toggleUrlModal();
-			return;
-		}
-		const { defaultProtocol, searchEngine } = props;
-		const sanitizedInput = onUrlSubmit(inputValue, searchEngine, defaultProtocol);
-		await go(sanitizedInput);
-		toggleUrlModal();
-	};
-
-	/** Clear search input and focus */
-	const clearSearchInput = () => {
-		setAutocompleteValue('');
-		inputRef.current?.focus?.();
-	};
-
-	/**
-	 * Render url input modal
-	 */
-	const renderUrlModal = () => {
-		if (showUrlModal && inputRef) {
-			setTimeout(() => {
-				const { current } = inputRef;
-				if (current && !current.isFocused()) {
-					current.focus();
-				}
-			}, ANIMATION_TIMING);
-		}
-
-		return (
-			<Modal
-				isVisible={showUrlModal}
-				style={styles.urlModal}
-				onBackdropPress={toggleUrlModal}
-				onBackButtonPress={toggleUrlModal}
-				animationIn="slideInDown"
-				animationOut="slideOutUp"
-				backdropColor={colors.overlay.default}
-				backdropOpacity={1}
-				animationInTiming={ANIMATION_TIMING}
-				animationOutTiming={ANIMATION_TIMING}
-				useNativeDriver
-			>
-				<View style={styles.urlModalContent} testID={'url-modal'}>
-					<View style={styles.searchWrapper}>
-						<TextInput
-							keyboardType="web-search"
-							ref={inputRef}
-							autoCapitalize="none"
-							autoCorrect={false}
-							testID={'url-input'}
-							onChangeText={onURLChange}
-							onSubmitEditing={onUrlInputSubmit}
-							placeholder={strings('autocomplete.placeholder')}
-							placeholderTextColor={colors.text.muted}
-							returnKeyType="go"
-							style={styles.urlInput}
-							value={autocompleteValue}
-							selectTextOnFocus
-							keyboardAppearance={themeAppearance}
-						/>
-						{autocompleteValue ? (
-							<TouchableOpacity onPress={clearSearchInput} style={styles.clearButton}>
-								<Icon
-									name="times-circle"
-									size={18}
-									color={colors.icon.default}
-									style={styles.clearIcon}
-								/>
-							</TouchableOpacity>
-						) : null}
-					</View>
-					<TouchableOpacity style={styles.cancelButton} testID={'cancel-url-button'} onPress={toggleUrlModal}>
-						<Text style={styles.cancelButtonText}>{strings('browser.cancel')}</Text>
-					</TouchableOpacity>
-				</View>
-				<UrlAutocomplete onSubmit={onUrlInputSubmit} input={autocompleteValue} onDismiss={toggleUrlModal} />
-			</Modal>
-		);
-	};
 
 	/**
 	 * Handle error, for example, ssl certificate error
@@ -1350,10 +1258,18 @@ export const BrowserTab = (props) => {
 		go(HOMEPAGE_HOST);
 	};
 
+	const handleOnFileDownload = async (downloadUrl) => {
+		const downloadResponse = await downloadFile(downloadUrl);
+		if (downloadResponse.success) {
+			onLoadEnd();
+		} else {
+			onError();
+		}
+	};
+
 	/**
 	 * Main render
 	 */
-	 {console.log('Browser tab rendered')}
 	return (
 		<ErrorBoundary view="BrowserTab">
 			<View
@@ -1382,13 +1298,13 @@ export const BrowserTab = (props) => {
 							allowsInlineMediaPlayback
 							useWebkit
 							testID={'browser-webview'}
-							onFileDownload={({ nativeEvent: { downloadUrl } }) => downloadFile(downloadUrl)}
+							onFileDownload={({ nativeEvent: { downloadUrl } }) => handleOnFileDownload(downloadUrl)}
 						/>
 					)}
 				</View>
 				{renderProgressBar()}
 				{isTabActive() && renderPhishingModal()}
-				{isTabActive() && renderUrlModal()}
+				{/* {isTabActive() && renderUrlModal()} */}
 				{isTabActive() && renderOptions()}
 				{isTabActive() && renderBottomBar()}
 				{isTabActive() && renderOnboardingWizard()}
