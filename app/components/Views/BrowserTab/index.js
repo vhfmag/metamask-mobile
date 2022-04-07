@@ -1206,12 +1206,18 @@ export const BrowserTab = (props) => {
 	};
 
 	const handleOnFileDownload = async (downloadUrl) => {
+		const onDownloadFinished = () => {
+			const { current } = webviewRef;
+			current && current.stopLoading();
+			changeUrl('');
+			setProgress(1);
+		};
 		const downloadResponse = await downloadFile(downloadUrl);
-		// might need to handle these differently
-		if (downloadResponse.success) {
-			setProgress(1);
+		if (downloadResponse) {
+			onDownloadFinished();
 		} else {
-			setProgress(1);
+			Alert.alert(strings('download_files.error'));
+			onDownloadFinished();
 		}
 	};
 

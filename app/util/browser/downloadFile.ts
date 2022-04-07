@@ -1,6 +1,7 @@
 import Share, { ShareOptions } from 'react-native-share';
 import { ShareOpenResult } from 'react-native-share/lib/typescript/types';
 import RNFetchBlob, { FetchBlobResponse } from 'rn-fetch-blob';
+import { strings } from '../../../locales/i18n';
 
 interface DownloadResult {
 	success: boolean;
@@ -9,10 +10,11 @@ interface DownloadResult {
 
 const shareFile = async (filePath: string) => {
 	const options: ShareOptions = {
-		title: 'Save file',
-		message: 'Where do you want this file to be saved?:',
+		title: strings('download_files.title'),
+		message: strings('download_files.message'),
 		url: filePath,
 		saveToFiles: true,
+		failOnCancel: false,
 	};
 	return await Share.open(options);
 };
@@ -21,11 +23,24 @@ const downloadFile = async (downloadUrl: string): Promise<DownloadResult> => {
 	const { config } = RNFetchBlob;
 	const response: FetchBlobResponse = await config({ fileCache: true }).fetch('GET', downloadUrl);
 	if (response.path()) {
-		const shareResponse: ShareOpenResult = await shareFile(response.path());
-		return {
-			success: shareResponse.success,
-			message: shareResponse.message,
-		};
+		try {
+			const shareResponse: ShareOpenResult = await shareFile(response.path());
+			return {
+				success: shareResponse.success,
+				message: shareResponse.message,
+			};
+		} catch (err) {
+			if (err instanceof Error) {
+				return {
+					success: false,
+					message: err.message.toString(),
+				};
+			}
+			return {
+				success: false,
+				message: 'unknown error occurred',
+			};
+		}
 	}
 	return {
 		success: false,
