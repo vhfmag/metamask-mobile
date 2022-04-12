@@ -347,8 +347,8 @@ export const BrowserTab = (props) => {
 					title,
 					icon,
 					// Bookmarks
+					toggleUrlModal,
 					isHomepage,
-					// Show autocomplete
 					fromHomepage,
 					// Wizard
 					wizardScrollAdjusted,
@@ -903,11 +903,14 @@ export const BrowserTab = (props) => {
 	 * Shows or hides the url input modal.
 	 * When opened it sets the current website url on the input.
 	 */
-	const toggleUrlModal = useCallback(() => {
-		const urlToShow = getMaskedUrl(url.current);
-		props.navigation.navigate('BrowserUrlModal', { url: urlToShow, onUrlInputSubmit });
+	const toggleUrlModal = useCallback(
+		(shouldClearInput = false) => {
+			const urlToShow = shouldClearInput ? '' : getMaskedUrl(url.current);
+			props.navigation.navigate('BrowserUrlModal', { url: urlToShow, onUrlInputSubmit });
+		},
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [onUrlInputSubmit]);
+		[onUrlInputSubmit]
+	);
 
 	/**
 	 * Enable the header to toggle the url modal and update other header data
@@ -1209,7 +1212,7 @@ export const BrowserTab = (props) => {
 		const onDownloadFinished = () => {
 			const { current } = webviewRef;
 			current && current.stopLoading();
-			changeUrl('');
+			changeUrl('', 'end-promise');
 			setProgress(1);
 		};
 		const downloadResponse = await downloadFile(downloadUrl);

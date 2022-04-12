@@ -306,8 +306,7 @@ class WalletConnect {
 					isHomepage: false,
 					// Show autocomplete
 					fromHomepage: false,
-					setAutocompleteValue: () => null,
-					setShowUrlModal: () => null,
+					toggleUrlModal: () => null,
 					// Wizard
 					wizardScrollAdjusted: () => null,
 					tabId: false,
