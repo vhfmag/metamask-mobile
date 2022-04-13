@@ -483,7 +483,6 @@ export const getRpcMethodMiddleware = ({
 			},
 
 			metamask_showAutocomplete: async () => {
-				console.log('metamask_showAutocomplete');
 				checkTabActive();
 				if (!isHomepage()) {
 					throw ethErrors.provider.unauthorized('Forbidden.');

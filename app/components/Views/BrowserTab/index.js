@@ -52,7 +52,7 @@ import { useAppThemeFromContext, mockTheme } from '../../../util/theme';
 import downloadFile from '../../../util/browser/downloadFile';
 
 const { HOMEPAGE_URL, USER_AGENT, NOTIFICATION_NAMES } = AppConstants;
-const HOMEPAGE_HOST = 'home.metamask.io';
+const HOMEPAGE_HOST = 'localhost:3000';
 const MM_MIXPANEL_TOKEN = process.env.MM_MIXPANEL_TOKEN;
 
 const createStyles = (colors) =>
