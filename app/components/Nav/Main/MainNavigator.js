@@ -45,6 +45,7 @@ import PaymentMethodSelector from '../../UI/FiatOrders/PaymentMethodSelector';
 import PaymentMethodApplePay from '../../UI/FiatOrders/PaymentMethodApplePay';
 import TransakWebView from '../../UI/FiatOrders/TransakWebView';
 import MoonPayWebView from '../../UI/FiatOrders/MoonPayWebView';
+import CBPayWebView from '../../UI/FiatOrders/CBPayWebView';
 import ActivityView from '../../Views/ActivityView';
 import SwapsAmountView from '../../UI/Swaps';
 import SwapsQuotesView from '../../UI/Swaps/QuotesView';
@@ -280,6 +281,7 @@ const FiatOnRamp = () => (
 		/>
 		<Stack.Screen name="TransakFlow" component={TransakWebView} options={TransakWebView.navigationOptions} />
 		<Stack.Screen name="MoonPayFlow" component={MoonPayWebView} options={MoonPayWebView.navigationOptions} />
+		<Stack.Screen name="CBPayFlow" component={CBPayWebView} options={CBPayWebView.navigationOptions} />
 		<Stack.Screen
 			name="GasEducationCarousel"
 			component={GasEducationCarousel}

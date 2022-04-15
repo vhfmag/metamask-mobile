@@ -27,6 +27,8 @@ import WyreApplePayPaymentMethod from './wyreApplePay';
 import { setGasEducationCarouselSeen } from '../../../../actions/user';
 import { useAppThemeFromContext, mockTheme } from '../../../../util/theme';
 import Device from '../../../../util/device';
+import CBPayPaymentMethod from './cbpay';
+import { isCBpayAllowedToBuy } from '../orderProcessor/cbpay';
 
 function PaymentMethodSelectorView({
 	selectedAddress,
@@ -131,6 +133,19 @@ function PaymentMethodSelectorView({
 		});
 	}, [gasEducationCarouselSeen, getSignedMoonPayURL, navigation, setGasEducationCarouselSeen]);
 
+	const onPressCBPay = useCallback(() => {
+		navigation.navigate('CBPayFlow');
+
+		InteractionManager.runAfterInteractions(() => {
+			AnalyticsV2.trackEvent(AnalyticsV2.ANALYTICS_EVENTS.ONRAMP_PURCHASE_STARTED, {
+				payment_rails: PAYMENT_RAILS.MULTIPLE,
+				payment_category: PAYMENT_CATEGORY.MULTIPLE,
+				'on-ramp_provider': FIAT_ORDER_PROVIDERS.CBPAY,
+			});
+			Analytics.trackEvent(ANALYTICS_EVENT_OPTS.PAYMENTS_SELECTS_DEBIT_OR_ACH);
+		});
+	}, [navigation]);
+
 	return (
 		<ScreenView>
 			<Heading>
@@ -140,6 +155,9 @@ function PaymentMethodSelectorView({
 					<Text reset>{strings('fiat_on_ramp.purchase_method_title.second_line')}</Text>
 				</Title>
 			</Heading>
+			{isCBpayAllowedToBuy(chainId) && (
+				<CBPayPaymentMethod onPress={onPressCBPay} ticker={getTicker(ticker)} chainId={chainId} />
+			)}
 			{Device.isIos() && isWyreAllowedToBuy(chainId) && (
 				<WyreApplePayPaymentMethod onPress={onPressWyreApplePay} />
 			)}
